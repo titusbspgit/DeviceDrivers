@@ -1,0 +1,18 @@
+name: build-tests
+
+on:
+  push:
+    branches: [ pcie-dwhsynopsis-driver-2026-03-30-1605 ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build DWHSynopsis tests
+        working-directory: PCIe/2026-03-30-1605-DWHSynopsis-Driver
+        run: |
+          make clean
+          make all
