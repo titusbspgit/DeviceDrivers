@@ -55,6 +55,10 @@
 
 /* LNKCTL2 fields */
 #define PCIE_LNKCTL2_TARGET_LINK_SPEED_MASK   (0xFu)
+/* Some integrations expose a Directed Speed Change bit in LNKCTL2; guard if unknown */
+#ifndef PCIE_LNKCTL2_DIRECTED_SPEED_CHANGE
+#define PCIE_LNKCTL2_DIRECTED_SPEED_CHANGE   (0u)
+#endif
 
 /* LNKSTA fields */
 #define PCIE_LNKSTA_NEG_LINK_SPEED_MASK       (0xFu)

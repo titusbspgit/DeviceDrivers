@@ -1,5 +1,21 @@
 #include "test_common.h"
 #include "dw_pcie_msi.h"
+#include "dw_pcie_regs.h"
+
+/* Simulate device-side set of W1C status: write device-endian value directly */
+static void fake_device_set_status(uintptr_t dbi, uint32_t status_off, uint32_t mask)
+{
+    volatile uint32_t *addr = (volatile uint32_t *)(dbi + (uintptr_t)status_off);
+#if (DW_PCIE_CPU_BIG_ENDIAN == 1u) && (DW_PCIE_DEVICE_LITTLE_ENDIAN == 1u)
+    uint32_t cur = __builtin_bswap32(*addr);
+    cur |= mask;
+    *addr = __builtin_bswap32(cur);
+#else
+    uint32_t cur = *addr;
+    cur |= mask;
+    *addr = cur;
+#endif
+}
 
 int main(void)
 {
@@ -21,10 +37,8 @@ int main(void)
     TEST_ASSERT((dw_reg_read32(dev.dbi_base, DW_MSI_INTR0_ENABLE_OFF) & (1u << 3)) != 0u);
     TEST_ASSERT((dw_reg_read32(dev.dbi_base, DW_MSI_INTR0_MASK_OFF) & (1u << 3)) == 0u);
 
-    /* Simulate interrupt status and clear it */
-    dw_reg_write32(dev.dbi_base, DW_MSI_INTR0_STATUS_OFF, 0u); /* clear any */
-    /* Set bit 3 by writing device-side value directly through HAL conversion */
-    dw_reg_write32(dev.dbi_base, DW_MSI_INTR0_STATUS_OFF, (1u << 3)); /* W1C will clear only on next write */
+    /* Simulate interrupt status set by device and clear it */
+    fake_device_set_status(dev.dbi_base, DW_MSI_INTR0_STATUS_OFF, (1u << 3));
     uint32_t st = dw_pcie_msi_read_status(&dev, 0u);
     TEST_ASSERT((st & (1u << 3)) != 0u);
     dw_pcie_msi_clear_status(&dev, 0u, (1u << 3));

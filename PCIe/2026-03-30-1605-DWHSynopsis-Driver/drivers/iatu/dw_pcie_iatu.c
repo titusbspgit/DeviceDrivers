@@ -49,7 +49,16 @@ int dw_pcie_iatu_program_ob(dw_pcie_dev_t *dev,
     /* Enable region */
     dw_reg_write32(dev->dbi_base, DW_IATU_REGION_CTRL2_OFF, DW_IATU_CTRL2_REGION_EN);
 
-    /* Small barrier to ensure programming completes before use */
+    /* Confirm region enable (poll a few times) */
+    for (uint32_t i = 0u; i < 1000u; ++i)
+    {
+        uint32_t st = dw_reg_read32(dev->dbi_base, DW_IATU_REGION_CTRL2_OFF);
+        if ((st & DW_IATU_CTRL2_REGION_EN) != 0u)
+        {
+            break;
+        }
+    }
+
     DW_DSB();
     return 0;
 }

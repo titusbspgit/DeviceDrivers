@@ -58,6 +58,8 @@ int dw_pcie_link_set_target_speed(dw_pcie_dev_t *dev, uint8_t target_speed)
     dbi_ro_write_enable(dev, true);
     uint16_t lnkctl2 = dw_reg_read16(dev->dbi_base, (uint32_t)dev->pcie_cap + PCIE_CAP_REG_LNKCTL2);
     lnkctl2 = (uint16_t)((lnkctl2 & (uint16_t)(~PCIE_LNKCTL2_TARGET_LINK_SPEED_MASK)) | (uint16_t)(target_speed & 0xFu));
+    /* Optionally request Directed Speed Change in LNKCTL2 if bit is defined */
+    lnkctl2 = (uint16_t)(lnkctl2 | (uint16_t)PCIE_LNKCTL2_DIRECTED_SPEED_CHANGE);
     dw_reg_write16(dev->dbi_base, (uint32_t)dev->pcie_cap + PCIE_CAP_REG_LNKCTL2, lnkctl2);
     dbi_ro_write_enable(dev, false);
 
