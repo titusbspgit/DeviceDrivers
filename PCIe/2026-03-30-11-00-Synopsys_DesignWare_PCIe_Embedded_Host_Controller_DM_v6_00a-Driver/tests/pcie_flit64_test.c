@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sys/wait.h>
 
 /* The test assumes an integration layer provides cfg ops over an fd or sysfs.
  * For portability, we provide a Linux userspace path using setpci via system().
