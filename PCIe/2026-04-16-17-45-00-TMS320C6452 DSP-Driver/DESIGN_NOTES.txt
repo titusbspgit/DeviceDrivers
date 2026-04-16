@@ -1,0 +1,39 @@
+Design Notes - TMS320C6452 GPIO Driver
+
+Mapping of features to APIs:
+1. Banked architecture -> tms_gpio_feature_banked_arch_get_bank_mask(), driver masks/constants.
+2. Pin multiplexing control -> tms_gpio_feature_pinmux_validate() hook and ctx->pinmux_validate callback.
+3. Endianness independence -> tms_gpio_feature_endianness_check() returns OK; 32-bit MMIO used.
+4. Direction control -> tms_gpio_set_direction(), tms_gpio_get_direction().
+5. Output drive control -> tms_gpio_write_pin(), tms_gpio_set_mask(), tms_gpio_clear_mask().
+6. Input sampling -> tms_gpio_read_inputs().
+7. Per-pin edge-triggered interrupts -> tms_gpio_config_edge().
+8. Per-bank interrupt enable -> tms_gpio_enable_bank_irq().
+9. Interrupt status & W1C -> tms_gpio_get_irq_status(), tms_gpio_clear_irq_status().
+10. EDMA event support -> Use tms_gpio_enable_bank_irq(); EDMA routing is SoC-level (not in this IP).
+11. Clock gating (PSC) -> tms_gpio_enable_module()/disable_module() using hooks.
+12. Low-power via PSC -> tms_gpio_enter_low_power()/exit_low_power().
+13. Reset behavior -> tms_gpio_feature_reset_reinit_sequence().
+14. Initialization sequence -> tms_gpio_feature_full_init().
+15. Emulation suspend -> No driver action; document behavior.
+16. Peripheral ID -> tms_gpio_get_pid().
+17. Concurrency-safe set/clear -> provided by SET/CLR APIs (atomic writes).
+18. Edge detection synchronized -> documented; no extra config.
+19. Open-drain interaction -> handled by read_inputs() semantics; external biasing required.
+20. No interrupt muxing -> bank ISRs are distinct in system; driver provides service helper.
+21. Register map and offsets -> macros in header.
+22. Controller base address -> provided via ctx->base or TMS_GPIO_BASE_DEFAULT.
+23. Error handling -> status codes, parameter checks, quiesce routine.
+24. Security -> out of scope for IP; enforce via MPU/MMU at system-level.
+
+Assumptions:
+- Offsets assumed as: PID=0x00, BINTEN=0x08, DIR=0x10, OUT=0x14, SET=0x18, CLR=0x1C, IN=0x20, SET_RIS=0x24, CLR_RIS=0x28, SET_FAL=0x2C, CLR_FAL=0x30, INTSTAT=0x34.
+- BINTEN bit0 enables bank0 (pins 0..15), bit1 enables bank1 (pins 16..31).
+- GPIO IP is endian-agnostic; 32-bit MMIO used. No byte swapping required.
+- SET/CLR and edge SET/CLR treated as write-only in driver logic.
+- Pinmux and PSC are managed by platform; driver provides hooks.
+
+Limitations:
+- No dynamic interrupt controller integration; caller must hook tms_gpio_service_bank_isr() into the SoC IRQ.
+- EDMA event mapping not configured by driver; platform must route events.
+- Tests that rely on real edges assume output-driven edges can self-trigger INTSTAT per spec note.
