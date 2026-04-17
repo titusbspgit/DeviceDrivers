@@ -9,39 +9,36 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-/* Base address type */
-typedef struct {
-    volatile uint32_t DIR01;      /* Offset 0x10: Direction register; 1=input,0=output */
-    volatile uint32_t OUT_DATA01; /* Offset 0x14: Output data latch */
-    volatile uint32_t SET_DATA01; /* Offset 0x18: Set data */
-    volatile uint32_t CLR_DATA01; /* Offset 0x1C: Clear data */
-    volatile uint32_t IN_DATA01;  /* Offset 0x20: Input data */
-} TMS320C6452_GPIO_Regs;
+/* Register offsets from GPIO base (verified via RAG) */
+#define GPIO_DIR01_OFFSET       (0x10u) /* Direction: 1=input, 0=output */
+#define GPIO_OUT_DATA01_OFFSET  (0x14u) /* Output data latch */
+#define GPIO_SET_DATA01_OFFSET  (0x18u) /* Set data (data only) */
+#define GPIO_CLR_DATA01_OFFSET  (0x1Cu) /* Clear data (data only) */
+#define GPIO_IN_DATA01_OFFSET   (0x20u) /* Synchronized input */
 
-/* Register offsets (for alternative access) */
-#define GPIO_DIR01_OFFSET      (0x10u)
-#define GPIO_OUT_DATA01_OFFSET (0x14u)
-#define GPIO_SET_DATA01_OFFSET (0x18u)
-#define GPIO_CLR_DATA01_OFFSET (0x1Cu)
-#define GPIO_IN_DATA01_OFFSET  (0x20u)
-
-/* Direction bit meaning */
-#define GPIO_DIR_INPUT_MASK(pin)  ((uint32_t)1u << (uint32_t)(pin))
+/* Direction bit helper */
+#define GPIO_PIN_MASK(pin_)     ((uint32_t)1u << (uint32_t)(pin_))
 
 /* Limits */
-#define GPIO_MAX_PIN   (31u)
+#define GPIO_MAX_PIN            (31u)
 
-/* Error codes */
+/* Status codes */
 typedef enum {
     GPIO_DIR_OK = 0,
     GPIO_DIR_ERR_PARAM = -1
 } gpio_dir_status_t;
 
 /* Public API */
+/*
+ * Initialize the GPIO direction driver with a base address. If base == 0, a
+ * platform default base is used (0xA1008000 as per provided configuration).
+ */
 void gpio_dir_init(uintptr_t base);
 
+/* Configure a pin's direction (true: output, false: input). */
 gpio_dir_status_t gpio_set_dir(uint32_t pin, bool is_output);
 
+/* Read back a pin's direction into *is_output (true: output). */
 gpio_dir_status_t gpio_get_dir(uint32_t pin, bool * is_output);
 
 #ifdef __cplusplus
