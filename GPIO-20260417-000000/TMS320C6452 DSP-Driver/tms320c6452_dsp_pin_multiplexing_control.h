@@ -14,8 +14,6 @@
 extern "C" {
 #endif
 
-typedef unsigned int u32;
-
 enum { TMS320C6452_DSP_ENOTSUP = -38 }; /* conventional ENOSYS/ENOTSUP placeholder */
 
 /* APIs (no MMIO performed since registers are UNKNOWN here) */
