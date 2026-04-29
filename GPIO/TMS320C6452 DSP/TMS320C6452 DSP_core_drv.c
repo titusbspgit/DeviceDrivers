@@ -5,9 +5,17 @@
  */
 #include "TMS320C6452 DSP_core.h"
 
-/* Endianness handling: perform bswap only when compiling for little-endian */
-#ifndef __BYTE_ORDER__
-  #error "Compiler byte order macro __BYTE_ORDER__ not defined"
+/* Endianness handling: prefer compile-time detection with fallbacks.
+ * Define GPIO_MMIO_BIG_ENDIAN==1 to force big-endian, 0 to force little-endian. */
+#ifndef GPIO_MMIO_BIG_ENDIAN
+  #if defined(__ARMEB__) || (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__))
+    #define GPIO_MMIO_BIG_ENDIAN 1
+  #elif defined(__ARMEL__) || (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__))
+    #define GPIO_MMIO_BIG_ENDIAN 0
+  #else
+    /* Default per config: big-endian */
+    #define GPIO_MMIO_BIG_ENDIAN 1
+  #endif
 #endif
 
 /* Volatile MMIO accessors with explicit widths */
@@ -25,7 +33,9 @@ static inline uint8_t mmio_read8(uintptr_t addr)
 
 static inline void mmio_write16(uintptr_t addr, uint16_t v)
 {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#if GPIO_MMIO_BIG_ENDIAN
+    /* raw store in BE */
+#else
     v = __builtin_bswap16(v);
 #endif
     volatile uint16_t *p = (volatile uint16_t *)addr;
@@ -36,7 +46,9 @@ static inline uint16_t mmio_read16(uintptr_t addr)
 {
     volatile const uint16_t *p = (volatile const uint16_t *)addr;
     uint16_t v = *p;
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#if GPIO_MMIO_BIG_ENDIAN
+    /* raw load in BE */
+#else
     v = __builtin_bswap16(v);
 #endif
     return v;
@@ -44,7 +56,9 @@ static inline uint16_t mmio_read16(uintptr_t addr)
 
 static inline void mmio_write32(uintptr_t addr, uint32_t v)
 {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#if GPIO_MMIO_BIG_ENDIAN
+    /* raw store in BE */
+#else
     v = __builtin_bswap32(v);
 #endif
     volatile uint32_t *p = (volatile uint32_t *)addr;
@@ -55,16 +69,12 @@ static inline uint32_t mmio_read32(uintptr_t addr)
 {
     volatile const uint32_t *p = (volatile const uint32_t *)addr;
     uint32_t v = *p;
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#if GPIO_MMIO_BIG_ENDIAN
+    /* raw load in BE */
+#else
     v = __builtin_bswap32(v);
 #endif
     return v;
-}
-
-/* Optional compiler I/O barrier for ordering */
-void gpio_io_barrier(void)
-{
-    __asm__ __volatile__("" ::: "memory");
 }
 
 /* Internal helpers */
@@ -204,6 +214,28 @@ static void core_bank_clear_mask(uint32_t bank, uint16_t mask)
     }
 }
 
+static void core_bank_dir_set_mask(uint32_t bank, uint16_t mask)
+{
+    if (bank < GPIO_NUM_BANKS)
+    {
+        uint32_t dir = core_reg_read32(GPIO_DIR01_OFFSET);
+        uint32_t shift = (bank * GPIO_PINS_PER_BANK);
+        dir |= ((uint32_t)mask) << shift;  /* 1=input */
+        core_reg_write32(GPIO_DIR01_OFFSET, dir);
+    }
+}
+
+static void core_bank_dir_clear_mask(uint32_t bank, uint16_t mask)
+{
+    if (bank < GPIO_NUM_BANKS)
+    {
+        uint32_t dir = core_reg_read32(GPIO_DIR01_OFFSET);
+        uint32_t shift = (bank * GPIO_PINS_PER_BANK);
+        dir &= ~(((uint32_t)mask) << shift); /* 0=output */
+        core_reg_write32(GPIO_DIR01_OFFSET, dir);
+    }
+}
+
 /* Public ops instance */
 const gpio_core_ops_t gpio_core =
 {
@@ -225,14 +257,11 @@ const gpio_core_ops_t gpio_core =
     .bank_read_outputs = core_bank_read_outputs,
     .bank_set_mask = core_bank_set_mask,
     .bank_clear_mask = core_bank_clear_mask,
+    .bank_dir_set_mask = core_bank_dir_set_mask,
+    .bank_dir_clear_mask = core_bank_dir_clear_mask,
 };
 
 /* Thin wrapper APIs */
-void gpio_io_barrier(void)
-{
-    __asm__ __volatile__("" ::: "memory");
-}
-
 void gpio_reg_write8(uintptr_t offset, uint8_t value)
 {
     gpio_core.reg_write8(offset, value);
@@ -306,4 +335,14 @@ void gpio_bank_set_mask(uint32_t bank, uint16_t mask)
 void gpio_bank_clear_mask(uint32_t bank, uint16_t mask)
 {
     gpio_core.bank_clear_mask(bank, mask);
+}
+
+void gpio_bank_dir_set_mask(uint32_t bank, uint16_t mask)
+{
+    gpio_core.bank_dir_set_mask(bank, mask);
+}
+
+void gpio_bank_dir_clear_mask(uint32_t bank, uint16_t mask)
+{
+    gpio_core.bank_dir_clear_mask(bank, mask);
 }
