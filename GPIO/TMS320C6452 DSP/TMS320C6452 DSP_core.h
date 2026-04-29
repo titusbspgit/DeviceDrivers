@@ -40,7 +40,8 @@ extern "C" {
 /* Core ops interface */
 typedef struct gpio_core_ops
 {
-    /* Raw register accessors (offset is from GPIO base) */
+    /* Raw register accessors (offset is from GPIO base)
+     * Note: Some GPIO IPs only support 32-bit accesses; validate on target. */
     void     (*reg_write8)(uintptr_t offset, uint8_t value);
     uint8_t  (*reg_read8)(uintptr_t offset);
 
@@ -64,13 +65,22 @@ typedef struct gpio_core_ops
     uint32_t (*bank_read_outputs)(uint32_t bank);
     void     (*bank_set_mask)(uint32_t bank, uint16_t mask);
     void     (*bank_clear_mask)(uint32_t bank, uint16_t mask);
+    void     (*bank_dir_set_mask)(uint32_t bank, uint16_t mask);   /* 1=input */
+    void     (*bank_dir_clear_mask)(uint32_t bank, uint16_t mask); /* 0=output */
 } gpio_core_ops_t;
 
 /* Public API: concrete ops instance */
 extern const gpio_core_ops_t gpio_core;
 
-/* Optional compiler I/O barrier for ordering */
-void gpio_io_barrier(void);
+/* Optional I/O barrier for ordering (arch-aware). Safe default is compiler barrier. */
+static inline void gpio_io_barrier(void)
+{
+#if defined(__arm__) || defined(__aarch64__)
+    __asm__ __volatile__("dmb sy" ::: "memory");
+#else
+    __asm__ __volatile__("" ::: "memory");
+#endif
+}
 
 /* Thin wrapper APIs on top of ops */
 void     gpio_reg_write8(uintptr_t offset, uint8_t value);
@@ -93,6 +103,8 @@ uint32_t gpio_read_bank_inputs(uint32_t bank);
 uint32_t gpio_read_bank_outputs(uint32_t bank);
 void     gpio_bank_set_mask(uint32_t bank, uint16_t mask);
 void     gpio_bank_clear_mask(uint32_t bank, uint16_t mask);
+void     gpio_bank_dir_set_mask(uint32_t bank, uint16_t mask);
+void     gpio_bank_dir_clear_mask(uint32_t bank, uint16_t mask);
 
 #ifdef __cplusplus
 }
