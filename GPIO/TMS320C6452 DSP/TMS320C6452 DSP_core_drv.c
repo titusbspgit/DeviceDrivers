@@ -1,348 +1,90 @@
-/*
- * TMS320C6452 DSP GPIO Core Driver - Source
- * Environment: ARM (baremetal), GCC, Big-endian
- * Note: Register offsets are placeholders; verify against device TRM. APIs are stable.
+/* Core GPIO driver source for TMS320C6452 DSP
+ * Environment: ARM, Baremetal, GCC
+ * Endianness handling: Registers are big-endian. Helpers swap on little-endian CPUs.
  */
 #include "TMS320C6452 DSP_core.h"
 
-/* Endianness handling: prefer compile-time detection with fallbacks.
- * Define GPIO_MMIO_BIG_ENDIAN==1 to force big-endian, 0 to force little-endian. */
-#ifndef GPIO_MMIO_BIG_ENDIAN
-  #if defined(__ARMEB__) || (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__))
-    #define GPIO_MMIO_BIG_ENDIAN 1
-  #elif defined(__ARMEL__) || (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__))
-    #define GPIO_MMIO_BIG_ENDIAN 0
+/* Compile-time endianness detection (GCC/Clang) */
+#if (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)) || \
+    defined(__ARMEB__) || defined(__BIG_ENDIAN__)
+#define GPIO_CORE_CPU_BIG_ENDIAN   (1)
+#else
+#define GPIO_CORE_CPU_BIG_ENDIAN   (0)
+#endif
+
+/* Local byte-swap utility (GCC builtin) */
+static inline uint32_t gpio_core_bswap32(uint32_t v)
+{
+#if defined(__has_builtin)
+  #if __has_builtin(__builtin_bswap32)
+    return __builtin_bswap32(v);
   #else
-    /* Default per config: big-endian */
-    #define GPIO_MMIO_BIG_ENDIAN 1
+    return (uint32_t)(((v & 0x000000FFu) << 24) |
+                      ((v & 0x0000FF00u) << 8)  |
+                      ((v & 0x00FF0000u) >> 8)  |
+                      ((v & 0xFF000000u) >> 24));
   #endif
-#endif
-
-/* Volatile MMIO accessors with explicit widths */
-static inline void mmio_write8(uintptr_t addr, uint8_t v)
-{
-    volatile uint8_t *p = (volatile uint8_t *)addr;
-    *p = v;
-}
-
-static inline uint8_t mmio_read8(uintptr_t addr)
-{
-    volatile const uint8_t *p = (volatile const uint8_t *)addr;
-    return *p;
-}
-
-static inline void mmio_write16(uintptr_t addr, uint16_t v)
-{
-#if GPIO_MMIO_BIG_ENDIAN
-    /* raw store in BE */
 #else
-    v = __builtin_bswap16(v);
+    return (uint32_t)(((v & 0x000000FFu) << 24) |
+                      ((v & 0x0000FF00u) << 8)  |
+                      ((v & 0x00FF0000u) >> 8)  |
+                      ((v & 0xFF000000u) >> 24));
 #endif
-    volatile uint16_t *p = (volatile uint16_t *)addr;
-    *p = v;
 }
 
-static inline uint16_t mmio_read16(uintptr_t addr)
-{
-    volatile const uint16_t *p = (volatile const uint16_t *)addr;
-    uint16_t v = *p;
-#if GPIO_MMIO_BIG_ENDIAN
-    /* raw load in BE */
-#else
-    v = __builtin_bswap16(v);
-#endif
-    return v;
-}
-
-static inline void mmio_write32(uintptr_t addr, uint32_t v)
-{
-#if GPIO_MMIO_BIG_ENDIAN
-    /* raw store in BE */
-#else
-    v = __builtin_bswap32(v);
-#endif
-    volatile uint32_t *p = (volatile uint32_t *)addr;
-    *p = v;
-}
-
-static inline uint32_t mmio_read32(uintptr_t addr)
+/* MMIO 32-bit read with endianness handling */
+uint32_t gpio_core_reg_read32(uintptr_t addr)
 {
     volatile const uint32_t *p = (volatile const uint32_t *)addr;
-    uint32_t v = *p;
-#if GPIO_MMIO_BIG_ENDIAN
-    /* raw load in BE */
-#else
-    v = __builtin_bswap32(v);
-#endif
+    uint32_t v = *p; /* deterministic 32-bit access */
+#if GPIO_CORE_CPU_BIG_ENDIAN
     return v;
+#else
+    return gpio_core_bswap32(v);
+#endif
 }
 
-/* Internal helpers */
-static inline uint32_t pin_mask(uint32_t pin)
+/* MMIO 32-bit write with endianness handling */
+void gpio_core_reg_write32(uintptr_t addr, uint32_t value)
 {
-    return (uint32_t)1u << (pin & 31u);
+#if GPIO_CORE_CPU_BIG_ENDIAN
+    volatile uint32_t *p = (volatile uint32_t *)addr;
+    *p = value;
+#else
+    volatile uint32_t *p = (volatile uint32_t *)addr;
+    *p = gpio_core_bswap32(value);
+#endif
+    (void)addr; /* MISRA: addr used via p */
 }
 
-static inline uintptr_t reg_addr(uintptr_t offset)
+/* Pin mapping helpers for 32 pins in two banks of 16 */
+uint32_t gpio_core_pin_to_bank(uint32_t pin)
 {
-    return GPIO_REG_ADDR(offset);
+    /* Caller must ensure pin < GPIO_NUM_PINS */
+    return (uint32_t)(pin >> 4); /* divide by 16 -> bank 0 or 1 */
 }
 
-/* Raw register read/write wrappers exposed via ops */
-static void core_reg_write8(uintptr_t offset, uint8_t value)
+uint32_t gpio_core_pin_to_bit(uint32_t pin)
 {
-    mmio_write8(reg_addr(offset), value);
+    return (uint32_t)(pin & (GPIO_BANK_WIDTH - 1u)); /* 0..15 */
 }
 
-static uint8_t core_reg_read8(uintptr_t offset)
+uint32_t gpio_core_pin_to_mask32(uint32_t pin)
 {
-    return mmio_read8(reg_addr(offset));
+    return (uint32_t)(1u << (pin & 31u));
 }
 
-static void core_reg_write16(uintptr_t offset, uint16_t value)
-{
-    mmio_write16(reg_addr(offset), value);
-}
-
-static uint16_t core_reg_read16(uintptr_t offset)
-{
-    return mmio_read16(reg_addr(offset));
-}
-
-static void core_reg_write32(uintptr_t offset, uint32_t value)
-{
-    mmio_write32(reg_addr(offset), value);
-}
-
-static uint32_t core_reg_read32(uintptr_t offset)
-{
-    return mmio_read32(reg_addr(offset));
-}
-
-/* Pin operations */
-static void core_pin_set(uint32_t pin)
-{
-    if (pin < GPIO_MAX_PINS)
-    {
-        core_reg_write32(GPIO_SET_DATA01_OFFSET, pin_mask(pin));
-    }
-}
-
-static void core_pin_clear(uint32_t pin)
-{
-    if (pin < GPIO_MAX_PINS)
-    {
-        core_reg_write32(GPIO_CLR_DATA01_OFFSET, pin_mask(pin));
-    }
-}
-
-static bool core_pin_read(uint32_t pin)
-{
-    if (pin < GPIO_MAX_PINS)
-    {
-        uint32_t v = core_reg_read32(GPIO_IN_DATA01_OFFSET);
-        return ( (v & pin_mask(pin)) != 0u );
-    }
-    return false;
-}
-
-static void core_pin_direction_set(uint32_t pin, bool input)
-{
-    if (pin < GPIO_MAX_PINS)
-    {
-        uint32_t dir = core_reg_read32(GPIO_DIR01_OFFSET);
-        uint32_t m = pin_mask(pin);
-        if (input)
-        {
-            dir |= m;  /* 1 = input */
-        }
-        else
-        {
-            dir &= ~m; /* 0 = output */
-        }
-        core_reg_write32(GPIO_DIR01_OFFSET, dir);
-    }
-}
-
-static bool core_pin_direction_get(uint32_t pin)
-{
-    if (pin < GPIO_MAX_PINS)
-    {
-        uint32_t dir = core_reg_read32(GPIO_DIR01_OFFSET);
-        return ( (dir & pin_mask(pin)) != 0u ); /* true=input */
-    }
-    return true; /* safe default */
-}
-
-static uint32_t core_bank_read_inputs(uint32_t bank)
-{
-    if (bank < GPIO_NUM_BANKS)
-    {
-        uint32_t v = core_reg_read32(GPIO_IN_DATA01_OFFSET);
-        uint32_t shift = (bank * GPIO_PINS_PER_BANK);
-        return (v >> shift) & 0xFFFFu;
-    }
-    return 0u;
-}
-
-static uint32_t core_bank_read_outputs(uint32_t bank)
-{
-    if (bank < GPIO_NUM_BANKS)
-    {
-        uint32_t v = core_reg_read32(GPIO_OUT_DATA01_OFFSET);
-        uint32_t shift = (bank * GPIO_PINS_PER_BANK);
-        return (v >> shift) & 0xFFFFu;
-    }
-    return 0u;
-}
-
-static void core_bank_set_mask(uint32_t bank, uint16_t mask)
-{
-    if (bank < GPIO_NUM_BANKS)
-    {
-        uint32_t shift = (bank * GPIO_PINS_PER_BANK);
-        core_reg_write32(GPIO_SET_DATA01_OFFSET, ((uint32_t)mask) << shift);
-    }
-}
-
-static void core_bank_clear_mask(uint32_t bank, uint16_t mask)
-{
-    if (bank < GPIO_NUM_BANKS)
-    {
-        uint32_t shift = (bank * GPIO_PINS_PER_BANK);
-        core_reg_write32(GPIO_CLR_DATA01_OFFSET, ((uint32_t)mask) << shift);
-    }
-}
-
-static void core_bank_dir_set_mask(uint32_t bank, uint16_t mask)
-{
-    if (bank < GPIO_NUM_BANKS)
-    {
-        uint32_t dir = core_reg_read32(GPIO_DIR01_OFFSET);
-        uint32_t shift = (bank * GPIO_PINS_PER_BANK);
-        dir |= ((uint32_t)mask) << shift;  /* 1=input */
-        core_reg_write32(GPIO_DIR01_OFFSET, dir);
-    }
-}
-
-static void core_bank_dir_clear_mask(uint32_t bank, uint16_t mask)
-{
-    if (bank < GPIO_NUM_BANKS)
-    {
-        uint32_t dir = core_reg_read32(GPIO_DIR01_OFFSET);
-        uint32_t shift = (bank * GPIO_PINS_PER_BANK);
-        dir &= ~(((uint32_t)mask) << shift); /* 0=output */
-        core_reg_write32(GPIO_DIR01_OFFSET, dir);
-    }
-}
-
-/* Public ops instance */
-const gpio_core_ops_t gpio_core =
-{
-    .reg_write8  = core_reg_write8,
-    .reg_read8   = core_reg_read8,
-    .reg_write16 = core_reg_write16,
-    .reg_read16  = core_reg_read16,
-    .reg_write32 = core_reg_write32,
-    .reg_read32  = core_reg_read32,
-
-    .pin_set = core_pin_set,
-    .pin_clear = core_pin_clear,
-    .pin_read = core_pin_read,
-
-    .pin_direction_set = core_pin_direction_set,
-    .pin_direction_get = core_pin_direction_get,
-
-    .bank_read_inputs = core_bank_read_inputs,
-    .bank_read_outputs = core_bank_read_outputs,
-    .bank_set_mask = core_bank_set_mask,
-    .bank_clear_mask = core_bank_clear_mask,
-    .bank_dir_set_mask = core_bank_dir_set_mask,
-    .bank_dir_clear_mask = core_bank_dir_clear_mask,
+/* Immutable core ops instance */
+static const gpio_core_ops_t s_gpio_core_ops = {
+    .base           = GPIO_BASE_ADDR,
+    .reg_read32     = gpio_core_reg_read32,
+    .reg_write32    = gpio_core_reg_write32,
+    .pin_to_bank    = gpio_core_pin_to_bank,
+    .pin_to_bit     = gpio_core_pin_to_bit,
+    .pin_to_mask32  = gpio_core_pin_to_mask32,
 };
 
-/* Thin wrapper APIs */
-void gpio_reg_write8(uintptr_t offset, uint8_t value)
+const gpio_core_ops_t* tms320c6452_dsp_gpio_core_get_ops(void)
 {
-    gpio_core.reg_write8(offset, value);
-}
-
-uint8_t gpio_reg_read8(uintptr_t offset)
-{
-    return gpio_core.reg_read8(offset);
-}
-
-void gpio_reg_write16(uintptr_t offset, uint16_t value)
-{
-    gpio_core.reg_write16(offset, value);
-}
-
-uint16_t gpio_reg_read16(uintptr_t offset)
-{
-    return gpio_core.reg_read16(offset);
-}
-
-void gpio_reg_write32(uintptr_t offset, uint32_t value)
-{
-    gpio_core.reg_write32(offset, value);
-}
-
-uint32_t gpio_reg_read32(uintptr_t offset)
-{
-    return gpio_core.reg_read32(offset);
-}
-
-void gpio_set_pin(uint32_t pin)
-{
-    gpio_core.pin_set(pin);
-}
-
-void gpio_clear_pin(uint32_t pin)
-{
-    gpio_core.pin_clear(pin);
-}
-
-bool gpio_read_pin(uint32_t pin)
-{
-    return gpio_core.pin_read(pin);
-}
-
-void gpio_set_direction(uint32_t pin, bool input)
-{
-    gpio_core.pin_direction_set(pin, input);
-}
-
-bool gpio_get_direction(uint32_t pin)
-{
-    return gpio_core.pin_direction_get(pin);
-}
-
-uint32_t gpio_read_bank_inputs(uint32_t bank)
-{
-    return gpio_core.bank_read_inputs(bank);
-}
-
-uint32_t gpio_read_bank_outputs(uint32_t bank)
-{
-    return gpio_core.bank_read_outputs(bank);
-}
-
-void gpio_bank_set_mask(uint32_t bank, uint16_t mask)
-{
-    gpio_core.bank_set_mask(bank, mask);
-}
-
-void gpio_bank_clear_mask(uint32_t bank, uint16_t mask)
-{
-    gpio_core.bank_clear_mask(bank, mask);
-}
-
-void gpio_bank_dir_set_mask(uint32_t bank, uint16_t mask)
-{
-    gpio_core.bank_dir_set_mask(bank, mask);
-}
-
-void gpio_bank_dir_clear_mask(uint32_t bank, uint16_t mask)
-{
-    gpio_core.bank_dir_clear_mask(bank, mask);
+    return &s_gpio_core_ops;
 }
