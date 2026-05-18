@@ -104,7 +104,7 @@ tms320c6452_dsp_gpio_status_t tms320c6452_dsp_gpio_banked_read_pin(
     bool* value);
 
 /* Interrupt helpers (optional) */
-tms320C6452_DSP_GPIO_STATUS_T tms320c6452_dsp_gpio_banked_irq_enable_bank(
+tms320c6452_dsp_gpio_status_t tms320c6452_dsp_gpio_banked_irq_enable_bank(
     tms320c6452_dsp_gpio_banked_ctx_t* ctx,
     uint32_t bank,
     uint32_t enable_mask);
