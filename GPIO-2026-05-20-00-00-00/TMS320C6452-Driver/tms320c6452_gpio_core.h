@@ -1,0 +1,63 @@
+#ifndef TMS320C6452_GPIO_CORE_H
+#define TMS320C6452_GPIO_CORE_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Global configuration base address (from system integration) */
+#ifndef TMS320C6452_GPIO_BASE
+#define TMS320C6452_GPIO_BASE  (0x18000000u) /* Provided base_location */
+#endif
+
+/* Register offsets (from GPIO base) */
+#define TMS320C6452_GPIO_PID_OFS            (0x00u)
+#define TMS320C6452_GPIO_BINTEN_OFS         (0x08u)
+#define TMS320C6452_GPIO_DIR01_OFS          (0x10u)
+#define TMS320C6452_GPIO_OUT_DATA01_OFS     (0x14u)
+#define TMS320C6452_GPIO_SET_DATA01_OFS     (0x18u)
+#define TMS320C6452_GPIO_CLR_DATA01_OFS     (0x1Cu)
+#define TMS320C6452_GPIO_IN_DATA01_OFS      (0x20u)
+#define TMS320C6452_GPIO_SET_RIS_TRIG01_OFS (0x24u)
+#define TMS320C6452_GPIO_CLR_RIS_TRIG01_OFS (0x28u)
+#define TMS320C6452_GPIO_SET_FAL_TRIG01_OFS (0x2Cu)
+#define TMS320C6452_GPIO_CLR_FAL_TRIG01_OFS (0x30u)
+#define TMS320C6452_GPIO_INTSTAT01_OFS      (0x34u)
+
+/* Absolute register addresses */
+#define TMS320C6452_GPIO_REG(ofs)           ( (uintptr_t)(TMS320C6452_GPIO_BASE + (ofs)) )
+#define TMS320C6452_GPIO_PID                TMS320C6452_GPIO_REG(TMS320C6452_GPIO_PID_OFS)
+#define TMS320C6452_GPIO_BINTEN             TMS320C6452_GPIO_REG(TMS320C6452_GPIO_BINTEN_OFS)
+#define TMS320C6452_GPIO_DIR01              TMS320C6452_GPIO_REG(TMS320C6452_GPIO_DIR01_OFS)
+#define TMS320C6452_GPIO_OUT_DATA01         TMS320C6452_GPIO_REG(TMS320C6452_GPIO_OUT_DATA01_OFS)
+#define TMS320C6452_GPIO_SET_DATA01         TMS320C6452_GPIO_REG(TMS320C6452_GPIO_SET_DATA01_OFS)
+#define TMS320C6452_GPIO_CLR_DATA01         TMS320C6452_GPIO_REG(TMS320C6452_GPIO_CLR_DATA01_OFS)
+#define TMS320C6452_GPIO_IN_DATA01          TMS320C6452_GPIO_REG(TMS320C6452_GPIO_IN_DATA01_OFS)
+#define TMS320C6452_GPIO_SET_RIS_TRIG01     TMS320C6452_GPIO_REG(TMS320C6452_GPIO_SET_RIS_TRIG01_OFS)
+#define TMS320C6452_GPIO_CLR_RIS_TRIG01     TMS320C6452_GPIO_REG(TMS320C6452_GPIO_CLR_RIS_TRIG01_OFS)
+#define TMS320C6452_GPIO_SET_FAL_TRIG01     TMS320C6452_GPIO_REG(TMS320C6452_GPIO_SET_FAL_TRIG01_OFS)
+#define TMS320C6452_GPIO_CLR_FAL_TRIG01     TMS320C6452_GPIO_REG(TMS320C6452_GPIO_CLR_FAL_TRIG01_OFS)
+#define TMS320C6452_GPIO_INTSTAT01          TMS320C6452_GPIO_REG(TMS320C6452_GPIO_INTSTAT01_OFS)
+
+/* Bitfield helpers */
+#define TMS320C6452_GPIO_BINTEN_EN0         (1u << 0)
+#define TMS320C6452_GPIO_BINTEN_EN1         (1u << 1)
+
+/* Core ops abstraction for deterministic access */
+typedef struct {
+    uint32_t (*read32)(uintptr_t addr);
+    void     (*write32)(uintptr_t addr, uint32_t val);
+    void     (*barrier)(void);
+} tms320c6452_gpio_core_ops_t;
+
+/* Get statically defined ops table */
+const tms320c6452_gpio_core_ops_t *tms320c6452_gpio_core_get_ops(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* TMS320C6452_GPIO_CORE_H */
