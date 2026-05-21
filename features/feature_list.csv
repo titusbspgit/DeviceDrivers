@@ -1,0 +1,18 @@
+feature_name,category,description,dependencies,driver_required
+C64x+ DSP CPU Core and Interrupt Architecture,Architecture,The device integrates a fixed-point C64x+ DSP core with a documented architecture and interrupt model enabling deterministic real-time execution.;, ,NO
+Pin Multiplexing/Sharing Subsystem,Configuration,Pins are shared among peripherals and GPIO; reset straps and pin-mux registers select functions and must be set before peripheral use.;Reset configuration; Pin-mux registers,YES
+DDR2/mDDR Memory Controller,Interface,On-chip controller interfaces to JESD79D-2A DDR2 and Mobile DDR; correct timing/programming is critical for stable high-bandwidth memory.;External DDR2 SDRAM device,YES
+3-Port Gigabit Ethernet Switch (3PSW) with SGMII and MDIO,Interface,Three-port gigabit Ethernet subsystem with SGMII links and MDIO for PHY control; configurable to operate as an Ethernet switch.;SGMII; MDIO; Pin-mux,YES
+PCI Master/Slave Port via EDMA,Interface,PCI port connects to external hosts/devices; data movement leverages EDMA to offload CPU for sustained throughput.;EDMA; Pin-mux,YES
+UHPI Host Port Interface,Interface,Parallel host interface allowing external master to access DSP memory space for control/boot and high-speed exchange.;Pin-mux,YES
+McASP Audio Serial Port (TDM/I2S/DIT),Interface,Multi-channel audio serial port supporting TDM, I2S, and DIT; requires correct serializer routing and clocking.;Pin-mux,YES
+SPI Controller (16-bit Configurable, Synchronous),Interface,Synchronous serial controller with configurable 16-bit transfers for sensors and control devices; mode and word size are software-set.;Pin-mux,YES
+UART Serial Port,Interface,Asynchronous serial port for console and legacy links; software configures baud, parity, and framing.;Pin-mux,YES
+I2C Controller (2-wire),Interface,Two-wire bus master/slave for low-speed device configuration and monitoring; software sequences addressing and transfers.;Pin-mux,YES
+TSIP Telecom Serial Interface (Multi-link, Single DMA Capability),Interface,Telecom serial interface with multi-link timeslot mapping and a single internal DMA capability for structured data.;Single DMA capability; Pin-mux,YES
+GPIO Module: Direction and Data Control (GP[31:0]),Configuration,Up to 32 GPIOs configurable as inputs/outputs; INDATA samples inputs while SET/CLR control outputs.;LPSC; Pin-mux,YES
+GPIO Edge-Triggered Interrupts (Rising/Falling) and Bank Status,Interrupts,Per-pin rising/falling edge detection with per-pin and bank status; sources can route to CPU interrupts.;CPU interrupt flags; INTSTAT01,YES
+GPIO to EDMA Event Generation,DMA/Buffering,GPIO events can trigger EDMA to integrate edge activity into DMA-driven data movement.;EDMA,YES
+Peripheral Power/Clock Gating via LPSC (General Pattern),Power/Clock,Peripherals require explicit clock/power enable via LPSC prior to configuration and use; sequence enables before register access.;LPSC,NO
+Register Reserved Bits Compliance,Configuration,Reserved bits in registers must be preserved; only documented fields should be modified to ensure forward compatibility.;,NO
+GPIO Emulation/Debug Considerations,Debug,Emulation interactions may affect observed timing/visibility; consult guidance when debugging GPIO behavior.;,NO
