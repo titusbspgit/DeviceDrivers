@@ -2,53 +2,43 @@
 #define TMS320C6452_GPIO_PIN_MULTIPLEXING_CONTROL_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Target Environment (UNKNOWN placeholders) */
-#define TMS320C6452_GPIO_CPU_ARCH UNKNOWN
-#define TMS320C6452_GPIO_ENVIRONMENT UNKNOWN
-#define TMS320C6452_GPIO_COMPILER UNKNOWN
-#define TMS320C6452_GPIO_ENDIANNESS UNKNOWN
-
-/* System/Device Configuration base (SYSCFG/DEV) for PINMUX access */
-#define TMS320C6452_GPIO_SYSCFG_BASE UNKNOWN
-
-/* PINMUX register model (device-specific; UNKNOWN without data manual) */
-#define TMS320C6452_GPIO_PINMUX_REG_COUNT UNKNOWN
-#define TMS320C6452_GPIO_PINMUX_FIELD_BITS UNKNOWN /* typically 2 bits per field; exact per data manual */
-
-/* KICK lock/unlock mechanism (device-specific; UNKNOWN without manual) */
-#define TMS320C6452_GPIO_KICK0_ADDR UNKNOWN
-#define TMS320C6452_GPIO_KICK1_ADDR UNKNOWN
-#define TMS320C6452_GPIO_KICK0_UNLOCK_KEY UNKNOWN
-#define TMS320C6452_GPIO_KICK1_UNLOCK_KEY UNKNOWN
-#define TMS320C6452_GPIO_KICK_LOCK_KEY  UNKNOWN
-
-/* Register addressing helpers (offsets UNKNOWN without manual) */
-#define TMS320C6452_GPIO_PINMUX_REG_OFFSET(n) UNKNOWN
-#define TMS320C6452_GPIO_PINMUX_REG_ADDR(base, n) ((volatile uint32_t*)((uintptr_t)(base) + (uintptr_t)(TMS320C6452_GPIO_PINMUX_REG_OFFSET(n))))
+/* Controller: TMS320C6452 GPIO */
+/* Feature: Pin multiplexing control */
 
 /* Error codes */
-#define TMS320C6452_GPIO_EOK           (0)
-#define TMS320C6452_GPIO_EINVAL        (-1)
-#define TMS320C6452_GPIO_EUNSUPPORTED  (-2)
-#define TMS320C6452_GPIO_EFAULT        (-3)
+#define TMS320C6452_GPIO_PINMUX_OK              (0)
+#define TMS320C6452_GPIO_PINMUX_EINVAL         (-1)  /* Invalid argument */
+#define TMS320C6452_GPIO_PINMUX_ESTATE         (-2)  /* Invalid state / not initialized or mapping incomplete */
+#define TMS320C6452_GPIO_PINMUX_EUNSUPPORTED   (-3)  /* Unsupported or unknown configuration */
 
-/* Driver context (single feature: Pin multiplexing control) */
-typedef struct {
-    uintptr_t syscfg_base; /* SYSCFG/DEV base for PINMUX access */
-} tms320c6452_gpio_pinmux_ctx_t;
+/* Placeholder for unknown base/register (must be provided by integrator) */
+#define TMS320C6452_GPIO_PINMUX_REG_UNKNOWN ((volatile uint32_t*)0)
 
-/* API declarations (single feature only) */
-int tms320c6452_gpio_pin_multiplexing_control_init(tms320c6452_gpio_pinmux_ctx_t* ctx, uintptr_t syscfg_base);
-int tms320c6452_gpio_pin_multiplexing_control_unlock(const tms320c6452_gpio_pinmux_ctx_t* ctx);
-int tms320c6452_gpio_pin_multiplexing_control_lock(const tms320c6452_gpio_pinmux_ctx_t* ctx);
-int tms320c6452_gpio_pin_multiplexing_control_set(const tms320c6452_gpio_pinmux_ctx_t* ctx, uint32_t pin_index, uint32_t function_sel);
-int tms320c6452_gpio_pin_multiplexing_control_get(const tms320c6452_gpio_pinmux_ctx_t* ctx, uint32_t pin_index, uint32_t* out_function_sel);
+/* Forward declaration of field descriptor */
+typedef struct tms320c6452_gpio_pinmux_field {
+    volatile uint32_t* reg; /* Address of the memory-mapped pinmux register controlling this GPIO's mux field. UNKNOWN if NULL. */
+    uint8_t lsb;            /* Least-significant bit position of the field */
+    uint8_t width;          /* Field width in bits (e.g., 2). 0 indicates UNKNOWN */
+} tms320c6452_gpio_pinmux_field_t;
+
+/* Configuration for the pinmux feature */
+typedef struct tms320c6452_gpio_pinmux_cfg {
+    const tms320c6452_gpio_pinmux_field_t* map; /* Array of per-GPIO field descriptors */
+    uint32_t count;                             /* Number of GPIO entries in map */
+} tms320C6452_gpio_pinmux_cfg_t;
+
+/* API */
+int tms320c6452_gpio_pinmux_init(const tms320C6452_gpio_pinmux_cfg_t* cfg);
+int tms320c6452_gpio_pinmux_set(uint32_t gpio_index, uint32_t function_code);
+int tms320c6452_gpio_pinmux_get(uint32_t gpio_index, uint32_t* out_function_code);
+bool tms320c6452_gpio_pinmux_is_initialized(void);
 
 #ifdef __cplusplus
 }

@@ -1,116 +1,139 @@
 #include "tms320c6452_gpio_pin_multiplexing_control.h"
 
-/* Memory-mapped I/O helpers (deterministic, no dynamic allocation) */
-static inline uint32_t mmio_read32(volatile uint32_t* addr) {
+/* Internal context */
+typedef struct {
+    const tms320C6452_gpio_pinmux_cfg_t* cfg;
+    bool initialized;
+} tms320c6452_gpio_pinmux_ctx_t;
+
+static tms320c6452_gpio_pinmux_ctx_t g_pinmux_ctx = { 0 };
+
+/* Helpers */
+static inline uint32_t field_mask_u32(uint8_t width, uint8_t lsb)
+{
+    if (width == 0u) {
+        return 0u;
+    }
+    uint32_t mask;
+    if (width >= 32u) {
+        mask = 0xFFFFFFFFu;
+    } else {
+        mask = (1u << width) - 1u;
+    }
+    mask <<= lsb;
+    return mask;
+}
+
+static inline uint32_t field_fit_u32(uint32_t value, uint8_t width)
+{
+    if (width == 0u) {
+        return 0u;
+    }
+    uint32_t mask = (width >= 32u) ? 0xFFFFFFFFu : ((1u << width) - 1u);
+    return (value & mask);
+}
+
+static inline void reg_write32(volatile uint32_t* addr, uint32_t val)
+{
+    *addr = val;
+    (void)*addr; /* Readback for ordering */
+}
+
+static inline uint32_t reg_read32(volatile uint32_t* addr)
+{
     return *addr;
 }
 
-static inline void mmio_write32(volatile uint32_t* addr, uint32_t val) {
-    *addr = val;
-    /* Read-back to ensure write completion (posted write barriers on some buses) */
-    (void)*addr;
+static inline void reg_update_field32(volatile uint32_t* addr, uint32_t mask, uint32_t shifted_val)
+{
+    uint32_t cur = reg_read32(addr);
+    uint32_t nxt = (cur & ~mask) | (shifted_val & mask);
+    reg_write32(addr, nxt);
 }
 
-/* Internal helper: compute register index, shift, and mask for a given pin index */
-static int pin_to_field(uint32_t pin_index, uint32_t* reg_index, uint32_t* shift_bits, uint32_t* field_mask)
+static inline bool validate_field(const tms320c6452_gpio_pinmux_field_t* f)
 {
-    if (!reg_index || !shift_bits || !field_mask) {
-        return TMS320C6452_GPIO_EFAULT;
-    }
-
-    /* Field geometry (UNKNOWN until defined by device manual) */
-    const uint32_t field_bits = TMS320C6452_GPIO_PINMUX_FIELD_BITS; /* UNKNOWN without manual */
-    const uint32_t reg_width_bits = 32u; /* Assumed 32-bit PINMUX registers */
-    const uint32_t fields_per_reg = (reg_width_bits / field_bits);
-
-    *reg_index = (pin_index / fields_per_reg);
-    const uint32_t field_index = (pin_index % fields_per_reg);
-    *shift_bits = (field_index * field_bits);
-    *field_mask = ((field_bits >= 32u) ? 0xFFFFFFFFu : ((1u << field_bits) - 1u)) << *shift_bits;
-
-    return TMS320C6452_GPIO_EOK;
+    if (f == NULL) { return false; }
+    if (f->width == 0u) { return false; }
+    if (f->lsb >= 32u) { return false; }
+    if ((uint32_t)f->width + (uint32_t)f->lsb > 32u) { return false; }
+    if (f->reg == NULL) { return false; }
+    return true;
 }
 
-int tms320c6452_gpio_pin_multiplexing_control_init(tms320c6452_gpio_pinmux_ctx_t* ctx, uintptr_t syscfg_base)
+/* API impl */
+int tms320c6452_gpio_pinmux_init(const tms320C6452_gpio_pinmux_cfg_t* cfg)
 {
-    if (ctx == NULL) {
-        return TMS320C6452_GPIO_EFAULT;
+    if ((cfg == NULL) || (cfg->map == NULL) || (cfg->count == 0u)) {
+        g_pinmux_ctx.initialized = false;
+        g_pinmux_ctx.cfg = NULL;
+        return TMS320C6452_GPIO_PINMUX_EINVAL;
     }
-    ctx->syscfg_base = syscfg_base;
-    return TMS320C6452_GPIO_EOK;
+    /* Basic structural validation only; individual entries validated on use */
+    g_pinmux_ctx.cfg = cfg;
+    g_pinmux_ctx.initialized = true;
+    return TMS320C6452_GPIO_PINMUX_OK;
 }
 
-int tms320c6452_gpio_pin_multiplexing_control_unlock(const tms320c6452_gpio_pinmux_ctx_t* ctx)
+bool tms320c6452_gpio_pinmux_is_initialized(void)
 {
-    if (ctx == NULL) {
-        return TMS320C6452_GPIO_EFAULT;
-    }
-
-    /* Device-specific KICK sequence (addresses and keys UNKNOWN without manual) */
-    volatile uint32_t* kick0 = (volatile uint32_t*)(uintptr_t)TMS320C6452_GPIO_KICK0_ADDR;
-    volatile uint32_t* kick1 = (volatile uint32_t*)(uintptr_t)TMS320C6452_GPIO_KICK1_ADDR;
-
-    mmio_write32(kick0, (uint32_t)TMS320C6452_GPIO_KICK0_UNLOCK_KEY);
-    mmio_write32(kick1, (uint32_t)TMS320C6452_GPIO_KICK1_UNLOCK_KEY);
-
-    return TMS320C6452_GPIO_EOK;
+    return g_pinmux_ctx.initialized;
 }
 
-int tms320c6452_gpio_pin_multiplexing_control_lock(const tms320c6452_gpio_pinmux_ctx_t* ctx)
+int tms320c6452_gpio_pinmux_set(uint32_t gpio_index, uint32_t function_code)
 {
-    if (ctx == NULL) {
-        return TMS320C6452_GPIO_EFAULT;
+    if (!g_pinmux_ctx.initialized) {
+        return TMS320C6452_GPIO_PINMUX_ESTATE;
+    }
+    if (g_pinmux_ctx.cfg == NULL || g_pinmux_ctx.cfg->map == NULL) {
+        return TMS320C6452_GPIO_PINMUX_ESTATE;
+    }
+    if (gpio_index >= g_pinmux_ctx.cfg->count) {
+        return TMS320C6452_GPIO_PINMUX_EINVAL;
     }
 
-    volatile uint32_t* kick0 = (volatile uint32_t*)(uintptr_t)TMS320C6452_GPIO_KICK0_ADDR;
-    volatile uint32_t* kick1 = (volatile uint32_t*)(uintptr_t)TMS320C6452_GPIO_KICK1_ADDR;
+    const tms320c6452_gpio_pinmux_field_t* f = &g_pinmux_ctx.cfg->map[gpio_index];
+    if (!validate_field(f)) {
+        return TMS320C6452_GPIO_PINMUX_ESTATE;
+    }
 
-    mmio_write32(kick0, (uint32_t)TMS320C6452_GPIO_KICK_LOCK_KEY);
-    mmio_write32(kick1, (uint32_t)TMS320C6452_GPIO_KICK_LOCK_KEY);
+    uint32_t fit = field_fit_u32(function_code, f->width);
+    if (fit != function_code) {
+        return TMS320C6452_GPIO_PINMUX_EINVAL; /* function code out of range */
+    }
 
-    return TMS320C6452_GPIO_EOK;
+    uint32_t mask = field_mask_u32(f->width, f->lsb);
+    uint32_t shifted = (fit << f->lsb);
+
+    reg_update_field32(f->reg, mask, shifted);
+
+    return TMS320C6452_GPIO_PINMUX_OK;
 }
 
-int tms320c6452_gpio_pin_multiplexing_control_set(const tms320c6452_gpio_pinmux_ctx_t* ctx, uint32_t pin_index, uint32_t function_sel)
+int tms320c6452_gpio_pinmux_get(uint32_t gpio_index, uint32_t* out_function_code)
 {
-    if (ctx == NULL) {
-        return TMS320C6452_GPIO_EFAULT;
+    if (!g_pinmux_ctx.initialized) {
+        return TMS320C6452_GPIO_PINMUX_ESTATE;
+    }
+    if (out_function_code == NULL) {
+        return TMS320C6452_GPIO_PINMUX_EINVAL;
+    }
+    if (g_pinmux_ctx.cfg == NULL || g_pinmux_ctx.cfg->map == NULL) {
+        return TMS320C6452_GPIO_PINMUX_ESTATE;
+    }
+    if (gpio_index >= g_pinmux_ctx.cfg->count) {
+        return TMS320C6452_GPIO_PINMUX_EINVAL;
     }
 
-    uint32_t reg_index, shift_bits, field_mask;
-    int rc = pin_to_field(pin_index, &reg_index, &shift_bits, &field_mask);
-    if (rc != TMS320C6452_GPIO_EOK) {
-        return rc;
+    const tms320c6452_gpio_pinmux_field_t* f = &g_pinmux_ctx.cfg->map[gpio_index];
+    if (!validate_field(f)) {
+        return TMS320C6452_GPIO_PINMUX_ESTATE;
     }
 
-    volatile uint32_t* reg = TMS320C6452_GPIO_PINMUX_REG_ADDR(ctx->syscfg_base, reg_index);
-    uint32_t val = mmio_read32(reg);
+    uint32_t mask = field_mask_u32(f->width, f->lsb);
+    uint32_t val = reg_read32(f->reg);
+    val = (val & mask) >> f->lsb;
+    *out_function_code = field_fit_u32(val, f->width);
 
-    /* Clear field, set new function selection */
-    val &= ~field_mask;
-    val |= ((function_sel << shift_bits) & field_mask);
-
-    mmio_write32(reg, val);
-    (void)mmio_read32(reg); /* enforce ordering */
-
-    return TMS320C6452_GPIO_EOK;
-}
-
-int tms320c6452_gpio_pin_multiplexing_control_get(const tms320c6452_gpio_pinmux_ctx_t* ctx, uint32_t pin_index, uint32_t* out_function_sel)
-{
-    if (ctx == NULL || out_function_sel == NULL) {
-        return TMS320C6452_GPIO_EFAULT;
-    }
-
-    uint32_t reg_index, shift_bits, field_mask;
-    int rc = pin_to_field(pin_index, &reg_index, &shift_bits, &field_mask);
-    if (rc != TMS320C6452_GPIO_EOK) {
-        return rc;
-    }
-
-    volatile uint32_t* reg = TMS320C6452_GPIO_PINMUX_REG_ADDR(ctx->syscfg_base, reg_index);
-    uint32_t val = mmio_read32(reg);
-
-    *out_function_sel = (val & field_mask) >> shift_bits;
-    return TMS320C6452_GPIO_EOK;
+    return TMS320C6452_GPIO_PINMUX_OK;
 }
