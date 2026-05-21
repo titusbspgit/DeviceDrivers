@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include "tms320c6452_gpio_banked_architecture_32_signals_2_banks.h"
 
-/* Simple callback to observe ISR dispatch */
 static void test_gpio_cb(uint32_t pin)
 {
     printf("ISR callback for pin %u\n", (unsigned)pin);
@@ -26,7 +25,6 @@ static void dump_regs(void)
            (unsigned)TMS320C6452_GPIO_BINTEN);
 }
 
-/* Edge cases: invalid parameters */
 static void run_edge_cases(void)
 {
     int rc;
@@ -34,7 +32,7 @@ static void run_edge_cases(void)
     uint32_t v;
     uint16_t bankv;
 
-    rc = tms320c6452_gpio_banked_set_direction(32u, true);  /* invalid pin */
+    rc = tms320c6452_gpio_banked_set_direction(32u, true);
     printf("set_direction(pin=32) rc=%d (expect -1)\n", rc);
 
     rc = tms320c6452_gpio_banked_get_direction(32u, &dir);
@@ -69,12 +67,10 @@ int main(void)
 {
     printf("TMS320C6452 GPIO banked architecture test start\n");
 
-    /* Initialize */
     tms320c6452_gpio_banked_init();
     dump_regs();
 
-    /* Configure pin 0 as output and toggle */
-    int rc = tms320c6452_gpio_banked_set_direction(0u, false); /* output */
+    int rc = tms320c6452_gpio_banked_set_direction(0u, false);
     printf("set_direction(pin0, output) rc=%d\n", rc);
     dump_regs();
 
@@ -82,33 +78,27 @@ int main(void)
     printf("set_pin(0) rc=%d\n", rc);
     dump_regs();
 
-    rc = tms320C6452_gpio_banked_clear_pin(0u); /* Intentional case-mismatch removed in production; kept here would fail. */
-    /* Fix: use correct symbol: */
     rc = tms320c6452_gpio_banked_clear_pin(0u);
     printf("clear_pin(0) rc=%d\n", rc);
     dump_regs();
 
-    /* Configure pin 1 as input and read */
-    rc = tms320c6452_gpio_banked_set_direction(1u, true); /* input */
+    rc = tms320c6452_gpio_banked_set_direction(1u, true);
     printf("set_direction(pin1, input) rc=%d\n", rc);
     uint32_t pin1_val = 0u;
     rc = tms320c6452_gpio_banked_read_pin(1u, &pin1_val);
     printf("read_pin(1) rc=%d value=%u\n", rc, (unsigned)pin1_val);
 
-    /* Bank 0 write: set pin 2 and clear pin 3 via masks */
-    rc = tms320c6452_gpio_banked_set_direction(2u, false); /* output */
-    rc |= tms320c6452_gpio_banked_set_direction(3u, false); /* output */
+    rc = tms320c6452_gpio_banked_set_direction(2u, false);
+    rc |= tms320c6452_gpio_banked_set_direction(3u, false);
     rc |= tms320c6452_gpio_banked_write_bank_mask(0u, (uint16_t)(1u << 2), (uint16_t)(1u << 3));
     printf("write_bank_mask(bank0, set p2, clr p3) rc=%d\n", rc);
     dump_regs();
 
-    /* Read bank inputs for both banks */
     uint16_t bank0 = 0u, bank1 = 0u;
     rc = tms320c6452_gpio_banked_read_bank_inputs(0u, &bank0);
     rc |= tms320c6452_gpio_banked_read_bank_inputs(1u, &bank1);
     printf("bank0_in=0x%04X bank1_in=0x%04X rc=%d\n", bank0, bank1, rc);
 
-    /* Interrupt configuration: enable bank 0, configure pin 4 rising edge */
     rc = tms320c6452_gpio_banked_enable_bank_irq(0u, true);
     printf("enable_bank_irq(bank0) rc=%d\n", rc);
     rc = tms320c6452_gpio_banked_register_callback(4u, test_gpio_cb);
@@ -117,14 +107,11 @@ int main(void)
     printf("configure_pin_irq(pin4 rising) rc=%d\n", rc);
     dump_regs();
 
-    /* Simulate callback path (cannot set INTSTAT in SW) */
     test_gpio_cb(4u);
 
-    /* Clear any (potential) pending flags */
     tms320c6452_gpio_banked_clear_pending((uint32_t)(1u << 4));
     dump_regs();
 
-    /* Edge cases */
     run_edge_cases();
 
     printf("TMS320C6452 GPIO banked architecture test complete\n");
