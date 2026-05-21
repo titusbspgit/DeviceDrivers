@@ -1,27 +1,29 @@
 feature_name,category,description,dependencies,driver_required
-C64x+ VLIW core and instruction set,Core,Fixed-point C64x+ DSP core with eight-issue VLIW pipeline; SIMD-style ops; caches and L2 for throughput; deterministic timing requires careful scheduling and cache planning.,None; optional cache and memory configuration during init,NO
-L1P instruction cache,Memory/Cache,On-chip instruction cache ~32 KB reduces fetch latency; benefits from code locality; consider L2 SRAM locking for determinism.,Optional cache configuration via startup code,NO
-L1D data cache,Memory/Cache,On-chip data cache ~32 KB accelerates data access; coordinate with DMA to avoid coherency issues; align buffers.,Cache maintenance or non-cacheable regions when using DMA,NO
-L2 unified SRAM/cache,Memory/Cache,Configurable as SRAM/cache or mixed; lock critical code/data for determinism; extends hot working set.,Startup configuration of L2 and memory attributes,NO
-IDMA (internal DMA),DMA,CPU-triggered on-chip copies for short deterministic moves between L1/L2; complements EDMA.,None; coordinate with cache settings,NO
-DDR2/mDDR memory controller,Memory Controller,JEDEC-compliant external SDRAM; requires timing/sequence programming; verify with pattern tests before high-throughput.,PSC enable; stable PLL/clock; board-specific DDR parameters,YES
-EDMA3 DMA engine,DMA,High-throughput memory/peripheral transfers with PaRAM link/chain; queues and TCs; IPR/ICR and CCERR for status.,PSC enable for EDMA CC/TC; INTC mapping; optional event routing,YES
-Gigabit Ethernet MAC (EMAC) with MDIO,Networking/Ethernet,10/100/1000 MAC with DMA rings; ALE/filtering; MDIO PHY management; ensure cache-coherent descriptors.,PSC enable; PINMUX; MDIO clock; PHY; DMA rings; INTC,YES
-PCI interface,Interconnect/Host,Conventional PCI host/slave; config header and BARs expose windows; use EDMA for bulk; align endianness.,PSC enable; host reset; BAR/window map; EDMA for bulk,YES
-UHPI (Host Port Interface),Host Interface,External host memory-map access; width/reset/handshake controls; supports polled/interrupt modes.,PSC enable; host timing/handshake; INTC if used,YES
-VLYNQ high-speed link,High-speed Link,Point-to-point serial link mapping peer resources; requires consistent config; verify windows before DMA.,PSC enable; PINMUX; peer config; window mapping,YES
-McBSP (multichannel buffered serial port),Audio Serial,Multichannel TDM/I2S; SRGR clocking; RCR/XCR frame control; DRR/DXR FIFOs; EDMA servicing.,PSC enable; PINMUX; EDMA setup; INTC mapping,YES
-SPI controller,Serial,Master/slave CPOL/CPHA; SPIFMT and SPIDELAY configure format/timing; EDMA for long transfers.,PSC enable; PINMUX; CS wiring; optional EDMA/interrupts,YES
-I2C controller,Serial,Master/slave with programmable SCL timing; ICMDR/ICSTR control/status; external pull-ups required.,PSC enable; PINMUX; external pull-ups; INTC mapping,YES
-UART,Serial,16550-like with RX/TX FIFOs; DLL/DLH divisors generate baud; EDMA optional for sustained rates.,PSC enable; PINMUX; reference clock; INTC mapping,YES
-GPIO,GPIO,Up to 32 GPIO; per-bit direction; SET/CLR/IN_DATA access; edge-detect and banked interrupts.,PSC enable; PINMUX; INTC mapping; optional EDMA sync,YES
-64-bit General-Purpose Timer (dual 32-bit),Timer,64-bit or dual 32-bit operation; periodic/one-shot; compare/overflow interrupts; capture/PWM via pinmux.,PSC enable; INTC mapping; optional PINMUX for capture/PWM,YES
-PLL and clock tree,Clocking,Main PLL and peripheral dividers; follow lock/unlock sequence; ensure stability before enabling DDR/high-speed IO.,Stable ref clock; correct programming order; PSC sequencing,YES
-Power and Sleep Controller (PSC/LPSC),Power,Power/clock gating per domain; transition to ENABLE before access; gate unused modules.,Required by all peripheral drivers; domain ordering,YES
-Pin multiplexing and KICK unlock,Configuration,KICK unlock protects PINMUX writes; select functions to avoid conflicts; preserve reserved fields.,KICK unlock sequence; ordered with PSC to avoid unsafe toggles,YES
-Interrupt controller and event framework,Interrupts,Event combiner and INTMUX map events to CPU interrupts; clear peripheral flags before ack to avoid retrigger.,Peripheral enables; INTMUX mapping; optional event combiner,YES
-Boot ROM and boot modes,Boot,ROM selects boot source by straps; loads first-stage to internal memory; app reprograms PLL/PSC/DDR.,Board straps; ROM revision; boot media present,NO
-Low-power modes (IDLE and domain gating),Power,IDLE gates core clock until interrupt; PSC gates domains for deeper savings; coordinate entry/exit.,Wake interrupt routing; PSC domain config,NO
-JTAG/emulation and debug,Debug,JTAG for debug/trace; emulation-aware options keep clocks during halt; consider side effects on timers/DMA/links.,External emulator; toolchain integration,NO
-Error handling and status framework,Error Handling,Write-1-to-clear status; EDMA IPR/ICR/CCERR; centralize logging and counters for diagnostics.,Per-driver ISR/polling; logging infra,NO
-Memory attributes (MAR),Configuration/Memory,MAR policy defines cacheability for external regions; isolate MMIO non-cacheable; DMA buffers coherent.,Privileged CPU setup; coordinated with cache/DMA,NO
+C64x+ VLIW core and instruction set,Core,Fixed-point C64x+ DSP core with eight-issue VLIW; SIMD-style ops; caches and L2; deterministic timing needs careful scheduling and cache planning.,None; optional cache/L2 configuration during early init,NO
+L1P instruction cache,Memory/Cache,~32 KB instruction cache reducing fetch latency; benefits from locality and function layout; consider L2 SRAM locking for determinism.,Optional cache configuration during startup,NO
+L1D data cache,Memory/Cache,~32 KB data cache; align/pad to cache lines; coordinate with DMA to avoid coherency hazards.,Cache maintenance or non-cacheable mapping for DMA buffers,NO
+L2 unified SRAM/cache,Memory/Cache,Configurable as SRAM/cache/mixed; lock critical code/data for determinism; extends hot working set.,Early boot L2 partitioning and attribute setup,NO
+IDMA (internal DMA),DMA,CPU-triggered on-chip copies between L2/L1 for small deterministic moves; complements EDMA.,None; coordinate with cache settings,NO
+DDR2/mDDR memory controller,Memory Controller,JEDEC-compliant external SDRAM; program SDCR/SDTIMx/SDRCR and power-up sequence; validate with pattern tests.,PSC enable; stable PLL/clock; board DDR parameters,YES
+EDMA3 DMA engine,DMA,High-throughput memory/peripheral transfers via PaRAM link/chain; queues/TCs; IPR/ICR and CCERR reporting.,PSC enable for EDMA CC/TC; INTC mapping; event routing,YES
+EMAC (Ethernet MAC) with MDIO,Networking/Ethernet,10/100/1000 EMAC with DMA descriptor rings; MDIO PHY management; ensure coherent descriptors.,PSC enable; PINMUX; MDIO clock; external PHY; DMA rings; INTC,YES
+PCI interface,Interconnect/Host,Conventional PCI host/target; config header and BARs; coordinate reset/negotiation; align endianness.,PSC enable; host reset; BAR/window mapping; EDMA for bulk,YES
+UHPI (Host Port Interface),Host Interface,Parallel host access to DSP memory map; HPIC/HPIA/HPID; polled or interrupt-driven.,PSC enable; host timing/handshake; INTC if used,YES
+VLYNQ high-speed link,High-speed Link,Point-to-point serial link mapping peer resources; configure lane rate/framing and address windows; verify mappings before DMA.,PSC enable; PINMUX; peer configuration; address window mapping,YES
+McBSP (multichannel buffered serial port),Audio/Telecom Serial,TDM/I2S with SRGR clocks; RCR/XCR frame control; DRR/DXR data path; EDMA servicing.,PSC enable; PINMUX; EDMA setup; INTC mapping,YES
+TSIP (Telecom Serial Interface Port),Telecom Serial,Multi-link telecom port with programmable framing and bit clocks; TX/RX time-slot transfers; FIFOs and status.,PSC enable; PINMUX; EDMA channels; INTC mapping,YES
+SPI controller,Serial,Master/slave CPOL/CPHA; SPIFMT/SPIDELAY configure format/delays; EDMA for long transfers.,PSC enable; PINMUX; CS wiring; optional EDMA/interrupts,YES
+I2C controller,Serial,Master/slave with prescaler and SCL low/high timing; ICMDR/ICSTR control/status; external pull-ups required.,PSC enable; PINMUX; external pull-ups; INTC mapping,YES
+UART,Serial,16550-like UART with RX/TX FIFOs; DLL/DLH for baud; PWREMU_MGMT; interrupt or EDMA servicing.,PSC enable; PINMUX; reference clock; INTC mapping,YES
+GPIO,GPIO,Up to 32 GPIO with direction/data control; edge-detect with banked interrupts; optional EDMA sync.,PSC enable; PINMUX; INTC mapping; optional EDMA sync,YES
+64-bit General-Purpose Timer (dual 32-bit),Timer,64-bit or dual 32-bit modes; periodic/one-shot; compare/overflow interrupts; capture/PWM via pinmux.,PSC enable; INTC mapping; optional PINMUX for capture/PWM,YES
+PLL and clock tree,Clocking,Main PLL and peripheral dividers; lock/unlock and GO sequences; ensure stability before enabling DDR/high-speed IO.,Stable reference clock; correct programming order; PSC sequencing,YES
+Power and Sleep Controller (PSC/LPSC),Power,Power/clock gating by domain/module; transitions via PTCMD with PTSTAT/MDSTAT status.,Required by all peripheral drivers; domain sequencing,YES
+Pin multiplexing and KICK unlock,Configuration,Unlock KICK to write PINMUX; select functions to avoid conflicts; preserve reserved bits.,KICK unlock sequence; ordered with PSC to avoid unsafe toggling,YES
+Interrupt controller and event framework,Interrupts,Event Combiner and INTMUX map events to CPU interrupts; clear peripheral status before ack.,Peripheral enables; INTMUX mapping; optional combiner,YES
+Boot ROM and boot modes,Boot,Strap-selected boot (I2C/SPI/UART/PCI/UHPI); ROM loads first stage then app reprograms PLL/PSC/DDR.,Board straps; ROM revision; external boot media,NO
+Low-power modes (IDLE and domain gating),Power,IDLE gates CPU clock; PSC can gate modules/domains; coordinate wake and data integrity.,Wake interrupt routing; PSC configuration,NO
+JTAG/emulation and debug,Debug,JTAG halt/trace; emulation-aware controls in some peripherals; coordinate to avoid perturbing real time.,External emulator; toolchain integration,NO
+Error handling and status framework,Error Handling,Write-1-to-clear status; EDMA IPR/ICR/CCERR; centralize logging and counters.,Per-driver ISR/polling; logging infrastructure,NO
+Security features,Security,No public secure boot or crypto accelerators documented; assume none by default.,UNKNOWN,NO
+Memory attributes (MAR/MPAX),Configuration/Memory,Cacheability and address extension for external regions; align DMA buffers and mark MMIO non-cacheable.,Privileged CPU configuration coordinated with cache and DMA usage,NO
