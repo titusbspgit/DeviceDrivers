@@ -1,6 +1,6 @@
 #include "tms320c6452_gpio_pin_multiplexing_control.h"
 
-/* Simple test application: init -> unlock -> set -> get -> verify -> lock, plus edge cases */
+/* Test application (single feature): init -> unlock -> set -> get -> lock, plus edge cases */
 
 static int test_basic_sequence(void)
 {
@@ -13,7 +13,7 @@ static int test_basic_sequence(void)
     rc = tms320c6452_gpio_pin_multiplexing_control_unlock(&ctx);
     if (rc != TMS320C6452_GPIO_EOK) return rc;
 
-    /* Configure pin 0 to function 1 (example; actual function mapping is device-specific) */
+    /* Example: Configure pin 0 to function 1 (actual mapping device-specific) */
     rc = tms320c6452_gpio_pin_multiplexing_control_set(&ctx, 0u, 1u);
     if (rc != TMS320C6452_GPIO_EOK) return rc;
 
@@ -21,7 +21,6 @@ static int test_basic_sequence(void)
     rc = tms320c6452_gpio_pin_multiplexing_control_get(&ctx, 0u, &fsel);
     if (rc != TMS320C6452_GPIO_EOK) return rc;
 
-    /* Optional: re-lock configuration */
     rc = tms320c6452_gpio_pin_multiplexing_control_lock(&ctx);
     if (rc != TMS320C6452_GPIO_EOK) return rc;
 
@@ -36,7 +35,7 @@ static int test_edge_cases(void)
     rc = tms320c6452_gpio_pin_multiplexing_control_init(&ctx, (uintptr_t)TMS320C6452_GPIO_SYSCFG_BASE);
     if (rc != TMS320C6452_GPIO_EOK) return rc;
 
-    /* Null pointer checks */
+    /* Null pointer check */
     rc = tms320c6452_gpio_pin_multiplexing_control_get(&ctx, 0u, NULL);
     if (rc == TMS320C6452_GPIO_EOK) return TMS320C6452_GPIO_EFAULT;
 
@@ -49,15 +48,12 @@ static int test_edge_cases(void)
 int main(void)
 {
     int rc;
+
     rc = test_basic_sequence();
-    if (rc != TMS320C6452_GPIO_EOK) {
-        return rc;
-    }
+    if (rc != TMS320C6452_GPIO_EOK) return rc;
 
     rc = test_edge_cases();
-    if (rc != TMS320C6452_GPIO_EOK) {
-        return rc;
-    }
+    if (rc != TMS320C6452_GPIO_EOK) return rc;
 
     return 0;
 }
