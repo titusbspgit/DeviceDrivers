@@ -19,9 +19,6 @@ static int pin_to_field(uint32_t pin_index, uint32_t* reg_index, uint32_t* shift
         return TMS320C6452_GPIO_EFAULT;
     }
 
-    /* Optional pin range check if known */
-    (void)TMS320C6452_GPIO_MAX_PINS; /* Placeholder reference to indicate dependency */
-
     /* Derive field geometry (UNKNOWN replaced when data available) */
     const uint32_t field_bits = TMS320C6452_GPIO_PINMUX_FIELD_BITS; /* UNKNOWN without manual */
     const uint32_t reg_width_bits = 32u; /* Assumed 32-bit PINMUX registers */
@@ -75,7 +72,7 @@ int tms320c6452_gpio_pin_multiplexing_control_lock(const tms320c6452_gpio_pinmux
     return TMS320C6452_GPIO_EOK;
 }
 
-int tms320c6452_gpio_pin_multiplexing_control_set(const tms320C6452_gpio_pinmux_ctx_t* ctx, uint32_t pin_index, uint32_t function_sel)
+int tms320c6452_gpio_pin_multiplexing_control_set(const tms320c6452_gpio_pinmux_ctx_t* ctx, uint32_t pin_index, uint32_t function_sel)
 {
     if (ctx == NULL) {
         return TMS320C6452_GPIO_EFAULT;

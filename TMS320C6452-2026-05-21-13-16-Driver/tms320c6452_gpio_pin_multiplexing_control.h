@@ -8,33 +8,27 @@
 extern "C" {
 #endif
 
-/* Target Environment (UNKNOWN placeholders if not provided) */
+/* Target Environment (UNKNOWN placeholders) */
 #define TMS320C6452_GPIO_CPU_ARCH UNKNOWN
 #define TMS320C6452_GPIO_ENVIRONMENT UNKNOWN
 #define TMS320C6452_GPIO_COMPILER UNKNOWN
 #define TMS320C6452_GPIO_ENDIANNESS UNKNOWN
 
-/* Controller Name: TMS320C6452 GPIO */
-/* Feature: Pin multiplexing control (single feature only) */
-
-/* System configuration base for PINMUX access */
+/* System/Device Configuration base (SYSCFG/DEV) for PINMUX access */
 #define TMS320C6452_GPIO_SYSCFG_BASE UNKNOWN
-
-/* Maximum number of GPIO-related pins available for muxing */
-#define TMS320C6452_GPIO_MAX_PINS UNKNOWN /* e.g., 32 for GP[31:0] if applicable */
 
 /* PINMUX register model (device-specific; UNKNOWN without data manual) */
 #define TMS320C6452_GPIO_PINMUX_REG_COUNT UNKNOWN
 #define TMS320C6452_GPIO_PINMUX_FIELD_BITS UNKNOWN /* typically 2 bits per field; exact per data manual */
 
-/* KICK lock/unlock mechanism (device-specific) */
+/* KICK lock/unlock mechanism (device-specific; UNKNOWN without manual) */
 #define TMS320C6452_GPIO_KICK0_ADDR UNKNOWN
 #define TMS320C6452_GPIO_KICK1_ADDR UNKNOWN
 #define TMS320C6452_GPIO_KICK0_UNLOCK_KEY UNKNOWN
 #define TMS320C6452_GPIO_KICK1_UNLOCK_KEY UNKNOWN
 #define TMS320C6452_GPIO_KICK_LOCK_KEY  UNKNOWN
 
-/* Register addressing helpers (offsets UNKNOWN without manual) */
+/* Register addressing helpers (offsets UNKNOWN without data manual) */
 #define TMS320C6452_GPIO_PINMUX_REG_OFFSET(n) UNKNOWN
 #define TMS320C6452_GPIO_PINMUX_REG_ADDR(base, n) ((volatile uint32_t*)((uintptr_t)(base) + (uintptr_t)(TMS320C6452_GPIO_PINMUX_REG_OFFSET(n))))
 
@@ -44,9 +38,9 @@ extern "C" {
 #define TMS320C6452_GPIO_EUNSUPPORTED  (-2)
 #define TMS320C6452_GPIO_EFAULT        (-3)
 
-/* Driver context: holds base needed for PINMUX access */
+/* Driver context */
 typedef struct {
-    uintptr_t syscfg_base; /* Required for PINMUX access */
+    uintptr_t syscfg_base; /* SYSCFG/DEV base; required for PINMUX access */
 } tms320c6452_gpio_pinmux_ctx_t;
 
 /* API declarations (single feature: Pin multiplexing control) */

@@ -1,6 +1,6 @@
 #include "tms320c6452_gpio_pin_multiplexing_control.h"
 
-/* Simple test application: init -> unlock -> set -> get -> verify (edge cases included) */
+/* Simple test application: init -> unlock -> set -> get -> verify -> lock, plus edge cases */
 
 static int test_basic_sequence(void)
 {
@@ -42,9 +42,6 @@ static int test_edge_cases(void)
 
     rc = tms320c6452_gpio_pin_multiplexing_control_init(NULL, (uintptr_t)TMS320C6452_GPIO_SYSCFG_BASE);
     if (rc == TMS320C6452_GPIO_EOK) return TMS320C6452_GPIO_EFAULT;
-
-    /* Out-of-range pin index if max is known (placeholder) */
-    (void)TMS320C6452_GPIO_MAX_PINS; /* reference to indicate dependency */
 
     return TMS320C6452_GPIO_EOK;
 }
