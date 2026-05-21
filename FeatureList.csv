@@ -1,0 +1,23 @@
+feature_name,category,description,dependencies,driver_required
+Power and Sleep Controller (PSC),Power/Clock,Controls module power states and local resets via MDCTL/PTCMD/PTSTAT/MDSTAT; must be sequenced before any peripheral access; used for deterministic bring-up and runtime gating.,Main PLL; PSC clock; Target module clocks,YES
+PLL Controller,Clocking,Generates system clocks with programmable PLLM/PLLDIVn and GO/lock handshake; must switch out of BYPASS only after lock; stable clocks are prerequisites for DDR and buses.,Reference clock; PSC for downstream modules,YES
+Pin Multiplexing (PINMUX),Configuration,Selects alternate functions for multiplexed pins to route McBSP/EMIFA/PCI/I2C/SPI/UART/GPIO; configure after PSC enable and before peripheral init.,CFG clock; Board pinout,YES
+Interrupt Multiplexer (INTMUX),Interrupts,Maps peripheral/EDMA events to CPU INT4–INT15 and works with CPU IER/IFR; prevents overlaps and prioritizes latency‑critical ISRs.,Peripheral events; CPU IER/IFR,YES
+Event Combiner (ECM),Interrupts,Aggregates many low‑priority events onto shared INT lines using EVTMASK/EVTFLAG/EVTCLR; service multiple sources in one ISR.,INTMUX outputs; CPU IER,YES
+EDMA3 Channel Controller (CC),DMA,Programs PaRAM sets and controls events/interrupts for memory/peripheral transfers; supports linking/chaining and completion via TCC.,PSC enable; INTMUX; Memory ready,YES
+EDMA3 Transfer Controllers and Queues,DMA,Executes scheduled transfers with tunable queue priorities/watermarks; monitor TCSTATUS for starvation and balance channel‑to‑queue mapping.,EDMA3 CC; Memory bandwidth,YES
+EDMA3 QDMA Channels,DMA,CPU‑triggered transfers via PaRAM trigger word for low‑latency copies; manage CIPR/CIER/CICR and guard against active PaRAM writes.,EDMA3 CC; Reserved PaRAM; INTMUX,YES
+EDMA3 Error Handling,Error Handling,Detects missed events and faults via EMR/CCERR; clear and recover channels; persistent errors often indicate address/permission issues.,INTMUX for error IRQs,YES
+DDR2 SDRAM Controller,Memory,Initializes external SDRAM with SDCR/SDTIMR1/2/SDRCR and PHY/VTP; only after stable PLL/PSC; verify with memory test.,Stable PLL; PSC; DDR power,YES
+EMIFA Asynchronous Memory Interface,Memory/Bus,Provides async access to NOR/NAND/SRAM with per‑CS timing (A1CR..A4CR, NANDFCR); correct mux/timing prevents contention and data errors.,PSC; PINMUX; Board timings,YES
+Conventional PCI Interface,Expansion,Implements 32‑bit PCI master/target; program local config (BARs, command/status) and address windows; integrate EDMA for throughput.,PSC; PCI clock; PINMUX,YES
+UHPI Host Port Interface,Host,Parallel host access to DSP memory via HPIA/HPID/HPIC; configure ownership/endianness; useful for boot/diagnostics.,PSC; PINMUX; INTMUX,YES
+McBSP (Multichannel Buffered Serial Port),Serial/Audio,TDM/framed serial with SRGR/PCR/SPCR/RCR/XCR; supports EDMA and strict reset/enable ordering.,PSC; PINMUX; EDMA,YES
+SPI Controller,SPI,Full‑duplex serial with SPIGCR/SPIFMT and SPIDAT/SPIBUF; handle CPOL/CPHA and chip‑select timing; EDMA optional.,PSC; PINMUX; External timing,YES
+UART,UART,16550‑style with baud via DLL/DLH and frame via LCR; use FIFOs/IIR; requires accurate input clock.,PSC; PINMUX; INTMUX,YES
+I2C Controller,I2C,Master/slave with ICPSC/ICCLKL/H and ICMDR; implement timeouts/NACK/bus‑clear for robustness.,PSC; PINMUX; Pull‑ups,YES
+GPIO,GPIO,Up to 32 pins with DIR01, SET/CLR_DATA and edge/latched status via INSTAT01; banked IRQs via BINTEN.,PSC; PINMUX; INTMUX,YES
+Timer64 (dual 32‑bit / single 64‑bit),Timers,Periodic or capture timing via TGCR/TCR and PRD/TIM; map IRQs with INTMUX; ensure clock accuracy and ISR budget.,PSC; INTMUX; Clock source,YES
+Cache and MAR Configuration,Performance/Memory,Control cacheability via MARx and L1/L2 cache policy; align with DMA placement or add maintenance to avoid coherency bugs.,EDMA usage; Memory map,YES
+Boot Configuration and ROM Boot,Boot,ROM selects boot mode via straps and CFG; firmware should sanitize PLL/PSC and log boot status before proceeding.,Board straps; CFG access,NO
+Device ID and Revision,Debug/Config,Read‑only IDs enable errata gating and capability detection; log at boot for fleet diagnostics.,NONE,NO
