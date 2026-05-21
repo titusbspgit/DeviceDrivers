@@ -5,17 +5,18 @@
 #include <stdbool.h>
 
 /* Controller Name: TMS320C6452 GPIO */
-/* Base Address: 0x02B00000 (verify per device memory map) */
+/* Base Address: configurable; default UNKNOWN if not defined */
 /* Target Environment: CPU/Arch: UNKNOWN, OS/Baremetal: UNKNOWN, Compiler: UNKNOWN, Endianness: UNKNOWN */
 
-/* Memory-mapped I/O helpers */
 #ifndef HWREG32
 #define HWREG32(x) (*((volatile uint32_t *)(x)))
 #endif
 
-#define TMS320C6452_GPIO_BASE          (0x02B00000u)
+#ifndef TMS320C6452_GPIO_BASE
+#define TMS320C6452_GPIO_BASE          (0xFFFFFFFFu) /* UNKNOWN */
+#endif
 
-/* Register offsets (from RAG, verify with device manual) */
+/* Register offsets */
 #define GPIO_PID_OFFSET                (0x00u)
 #define GPIO_BINTEN_OFFSET             (0x08u)
 #define GPIO_DIR01_OFFSET              (0x10u)
@@ -66,18 +67,17 @@ static inline uint32_t gpio_mask_of(uint32_t gpio)
 void tms320c6452_gpio_banked_init(void);
 void tms320c6452_gpio_bank_enable_interrupt(uint32_t bank, bool enable);
 
-/* Bulk masked output control (architecture-level atomic set/clear) */
+/* Bulk masked output control */
 void tms320c6452_gpio_write_mask(uint32_t set_mask, uint32_t clr_mask);
 
-/* Per-edge enable across both banks via 01-registers */
+/* Edge enable helpers */
 void tms320c6452_gpio_enable_rising(uint32_t mask);
 void tms320c6452_gpio_disable_rising(uint32_t mask);
 void tms320c6452_gpio_enable_falling(uint32_t mask);
 void tms320c6452_gpio_disable_falling(uint32_t mask);
 
-/* Readback helpers */
-uint32_t tms320c6452_gpio_read_inputs(void);
-uint32_t tms320c6452_gpio_read_outputs(void);
+/* Interrupt status/clear */
 uint32_t tms320c6452_gpio_get_int_status(void);
+void tms320c6452_gpio_clear_interrupts(uint32_t mask); /* UNKNOWN clear mechanism: stub implementation */
 
 #endif /* TMS320C6452_GPIO_BANKED_ARCH_H */
