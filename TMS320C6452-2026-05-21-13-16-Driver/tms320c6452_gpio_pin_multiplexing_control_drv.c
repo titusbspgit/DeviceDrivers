@@ -1,18 +1,62 @@
-#include "tms320c6452_gpio_pin_multiplexing_control.h"
+#include "tms320c6452_gpio_pin_multiplexing_control_drv.h"
 
-void tms320c6452_pinmux_apply(const tms320c6452_pinmux_entry_t *table, uint32_t count)
+static inline void reg_write32(volatile uint32_t* addr, uint32_t val)
 {
-    for (uint32_t i = 0; i < count; ++i) {
-        tms320c6452_pinmux_write_one(&table[i]);
-    }
+    (void)addr; (void)val;
+    /* UNKNOWN register addresses; no-op to preserve determinism */
 }
 
-bool tms320c6452_pinmux_verify(const tms320c6452_pinmux_entry_t *table, uint32_t count)
+static inline uint32_t reg_read32(volatile const uint32_t* addr)
 {
-    for (uint32_t i = 0; i < count; ++i) {
-        if (!tms320c6452_pinmux_is_gpio(&table[i])) {
-            return false;
-        }
+    (void)addr;
+    return 0u;
+}
+
+int tms320c6452_gpio_pinmux_init(tms320c6452_gpio_pinmux_ctx_t* ctx, uintptr_t syscfg_base)
+{
+    if (ctx == NULL) {
+        return TMS320C6452_GPIO_EINVAL;
     }
-    return true;
+    ctx->syscfg_base = syscfg_base;
+    return TMS320C6452_GPIO_EOK;
+}
+
+int tms320c6452_gpio_pinmux_unlock(const tms320c6452_gpio_pinmux_ctx_t* ctx)
+{
+    (void)ctx;
+#if 1
+    /* Missing data -> UNKNOWN: KICK registers and keys not defined */
+    return TMS320C6452_GPIO_EUNSUPPORTED;
+#endif
+}
+
+int tms320c6452_gpio_pinmux_lock(const tms320c6452_gpio_pinmux_ctx_t* ctx)
+{
+    (void)ctx;
+#if 1
+    /* Missing data -> UNKNOWN: KICK registers not defined */
+    return TMS320C6452_GPIO_EUNSUPPORTED;
+#endif
+}
+
+int tms320c6452_gpio_pinmux_set(const tms320c6452_gpio_pinmux_ctx_t* ctx, uint32_t pin_index, uint32_t function_sel)
+{
+    (void)ctx; (void)pin_index; (void)function_sel;
+#if 1
+    /* Missing data -> UNKNOWN: PINMUX register map and bitfields not defined */
+    return TMS320C6452_GPIO_EUNSUPPORTED;
+#endif
+}
+
+int tms320c6452_gpio_pinmux_get(const tms320c6452_gpio_pinmux_ctx_t* ctx, uint32_t pin_index, uint32_t* out_function_sel)
+{
+    (void)ctx; (void)pin_index;
+    if (out_function_sel == NULL) {
+        return TMS320C6452_GPIO_EINVAL;
+    }
+#if 1
+    /* Missing data -> UNKNOWN: PINMUX register map and bitfields not defined */
+    *out_function_sel = 0u;
+    return TMS320C6452_GPIO_EUNSUPPORTED;
+#endif
 }

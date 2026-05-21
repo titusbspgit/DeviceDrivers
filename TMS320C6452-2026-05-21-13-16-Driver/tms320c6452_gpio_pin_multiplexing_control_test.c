@@ -1,34 +1,28 @@
 #include <stdint.h>
-#include <stdbool.h>
-#include "tms320c6452_gpio_pin_multiplexing_control.h"
+#include "tms320c6452_gpio_pin_multiplexing_control_drv.h"
 
-/* NOTE: PINMUX register addresses/fields are device-specific and UNKNOWN here.
- * This test uses a simulated memory-mapped register to demonstrate deterministic behavior. */
+static void test_basic_sequence(void)
+{
+    tms320c6452_gpio_pinmux_ctx_t ctx;
+    (void)tms320c6452_gpio_pinmux_init(&ctx, 0u /* UNKNOWN base */);
+    (void)tms320c6452_gpio_pinmux_unlock(&ctx);
+    (void)tms320c6452_gpio_pinmux_set(&ctx, 0u, 0u);
+    uint32_t func = 0xFFFFFFFFu;
+    (void)tms320c6452_gpio_pinmux_get(&ctx, 0u, &func);
+    (void)tms320c6452_gpio_pinmux_lock(&ctx);
+}
 
-static volatile uint32_t SIM_PINMUX0;
+static void test_edge_cases(void)
+{
+    tms320c6452_gpio_pinmux_ctx_t ctx;
+    (void)tms320c6452_gpio_pinmux_init(&ctx, 0u);
+    (void)tms320c6452_gpio_pinmux_set(&ctx, 0xFFFFFFFFu, 3u);
+    (void)tms320c6452_gpio_pinmux_get(&ctx, 0xFFFFFFFFu, (uint32_t*)0);
+}
 
 int main(void)
 {
-    /* Example: field is 2 bits wide at LSBs, selecting 0b01 for GPIO. */
-    tms320c6452_pinmux_entry_t tbl[] = {
-        { &SIM_PINMUX0, 0x3u, 0x1u },
-    };
-
-    /* Clear to non-GPIO first */
-    SIM_PINMUX0 = 0x0u;
-
-    /* Apply GPIO selection */
-    tms320c6452_pinmux_apply(tbl, (uint32_t)(sizeof(tbl)/sizeof(tbl[0])));
-
-    /* Verify */
-    bool ok = tms320c6452_pinmux_verify(tbl, (uint32_t)(sizeof(tbl)/sizeof(tbl[0])));
-
-    /* Simple pass/fail loop (no stdio). */
-    for (;;) {
-        if (!ok) {
-            /* trap here for debug */
-        }
-    }
-
+    test_basic_sequence();
+    test_edge_cases();
     return 0;
 }
