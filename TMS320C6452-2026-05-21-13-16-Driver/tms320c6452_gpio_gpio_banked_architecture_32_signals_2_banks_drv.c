@@ -29,7 +29,6 @@ void tms320c6452_gpio_bank_enable_interrupt(uint32_t bank, bool enable)
 
 void tms320c6452_gpio_write_mask(uint32_t set_mask, uint32_t clr_mask)
 {
-    /* Atomic set then clear as requested */
     if (set_mask) {
         HWREG32(GPIO_SET_DATA01) = set_mask;
     }
@@ -70,6 +69,10 @@ uint32_t tms320c6452_gpio_read_outputs(void)
 
 uint32_t tms320c6452_gpio_get_int_status(void)
 {
-    /* Read-only latched status per pin; clearing is device-specific */
     return HWREG32(GPIO_INTSTAT01);
+}
+
+void tms320c6452_gpio_clear_interrupts(uint32_t mask)
+{
+    (void)mask; /* UNKNOWN: device-specific clear/ack sequence not defined here. */
 }
