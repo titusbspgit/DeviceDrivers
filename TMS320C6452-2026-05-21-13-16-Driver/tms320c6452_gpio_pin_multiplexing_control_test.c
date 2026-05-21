@@ -1,28 +1,48 @@
 #include <stdint.h>
-#include "tms320c6452_gpio_pin_multiplexing_control_drv.h"
+#include <stdio.h>
+#include "tms320c6452_gpio_pin_multiplexing_control.h"
 
-static void test_basic_sequence(void)
+static int test_basic_sequence(void)
 {
     tms320c6452_gpio_pinmux_ctx_t ctx;
-    (void)tms320c6452_gpio_pinmux_init(&ctx, 0u /* UNKNOWN base */);
-    (void)tms320c6452_gpio_pinmux_unlock(&ctx);
-    (void)tms320c6452_gpio_pinmux_set(&ctx, 0u, 0u);
+    int rc = 0;
+
+    if (tms320c6452_gpio_pin_multiplexing_control_init(&ctx, 0u /* UNKNOWN base */) != TMS320C6452_GPIO_EOK) rc++;
+    if (tms320c6452_gpio_pin_multiplexing_control_unlock(&ctx) != TMS320C6452_GPIO_EUNSUPPORTED) rc++;
+    if (tms320c6452_gpio_pin_multiplexing_control_set(&ctx, 0u, 0u) != TMS320C6452_GPIO_EUNSUPPORTED) rc++;
     uint32_t func = 0xFFFFFFFFu;
-    (void)tms320c6452_gpio_pinmux_get(&ctx, 0u, &func);
-    (void)tms320c6452_gpio_pinmux_lock(&ctx);
+    if (tms320c6452_gpio_pin_multiplexing_control_get(&ctx, 0u, &func) != TMS320C6452_GPIO_EUNSUPPORTED) rc++;
+    if (tms320c6452_gpio_pin_multiplexing_control_lock(&ctx) != TMS320C6452_GPIO_EUNSUPPORTED) rc++;
+
+    return rc;
 }
 
-static void test_edge_cases(void)
+static int test_edge_cases(void)
 {
     tms320c6452_gpio_pinmux_ctx_t ctx;
-    (void)tms320c6452_gpio_pinmux_init(&ctx, 0u);
-    (void)tms320c6452_gpio_pinmux_set(&ctx, 0xFFFFFFFFu, 3u);
-    (void)tms320c6452_gpio_pinmux_get(&ctx, 0xFFFFFFFFu, (uint32_t*)0);
+    int rc = 0;
+
+    if (tms320c6452_gpio_pin_multiplexing_control_init(&ctx, 0u) != TMS320C6452_GPIO_EOK) rc++;
+    if (tms320c6452_gpio_pin_multiplexing_control_get(&ctx, 1u, (uint32_t*)0) != TMS320C6452_GPIO_EINVAL) rc++;
+
+    return rc;
 }
 
 int main(void)
 {
-    test_basic_sequence();
-    test_edge_cases();
-    return 0;
+    int rc = 0;
+    rc += test_basic_sequence();
+    rc += test_edge_cases();
+
+    if (rc == 0) {
+        printf("PASS\n");
+    } else {
+        printf("FAIL:%d\n", rc);
+    }
+    return (rc == 0) ? 0 : 1;
 }
+
+/* GIT_STATUS
+Repository: https://github.com/titusbspgit/DeviceDrivers
+Branch: main
+Last commit contains this push. */

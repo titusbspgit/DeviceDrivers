@@ -2,42 +2,54 @@
 #define TMS320C6452_GPIO_PIN_MULTIPLEXING_CONTROL_H
 
 #include <stdint.h>
-#include <stdbool.h>
+#include <stddef.h>
 
-/* Controller Name: TMS320C6452 GPIO */
-/* Base Address: UNKNOWN (pinmux belongs to device configuration module) */
-/* Target Environment: CPU/Arch: UNKNOWN, OS/Baremetal: UNKNOWN, Compiler: UNKNOWN, Endianness: UNKNOWN */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/* The device pin multiplexing (PINMUX) registers are outside the GPIO module and are device/package specific.
- * This driver provides a deterministic, memory-mapped programming interface using caller-provided register
- * addresses and bitfields to select GPIO function for pins. No dynamic memory allocation is used. */
+/* Target Environment (UNKNOWN placeholders) */
+#define TMS320C6452_GPIO_CPU_ARCH UNKNOWN
+#define TMS320C6452_GPIO_ENVIRONMENT UNKNOWN
+#define TMS320C6452_GPIO_COMPILER UNKNOWN
+#define TMS320C6452_GPIO_ENDIANNESS UNKNOWN
 
+/* Base address for System/Device Configuration (SYSCFG/DEV) */
+#define TMS320C6452_GPIO_SYSCFG_BASE UNKNOWN
+
+/* PINMUX register model (UNKNOWN where exact mapping is not provided) */
+#define TMS320C6452_GPIO_PINMUX_REG_COUNT UNKNOWN
+#define TMS320C6452_GPIO_PINMUX_FIELD_BITS UNKNOWN /* typically 2 bits per field; exact per data manual */
+
+/* KICK lock/unlock mechanism (device-specific; UNKNOWN without manual) */
+#define TMS320C6452_GPIO_KICK0_ADDR UNKNOWN
+#define TMS320C6452_GPIO_KICK1_ADDR UNKNOWN
+#define TMS320C6452_GPIO_KICK0_UNLOCK_KEY UNKNOWN
+#define TMS320C6452_GPIO_KICK1_UNLOCK_KEY UNKNOWN
+
+/* Register addressing helpers (offsets are UNKNOWN without data manual) */
+#define TMS320C6452_GPIO_PINMUX_REG_OFFSET(n) UNKNOWN
+#define TMS320C6452_GPIO_PINMUX_REG_ADDR(base, n) ((volatile uint32_t*)((uintptr_t)(base) + (uintptr_t)(TMS320C6452_GPIO_PINMUX_REG_OFFSET(n))))
+
+/* Error codes */
+#define TMS320C6452_GPIO_EOK           (0)
+#define TMS320C6452_GPIO_EINVAL        (-1)
+#define TMS320C6452_GPIO_EUNSUPPORTED  (-2)
+
+/* Driver context */
 typedef struct {
-    volatile uint32_t *reg;   /* Address of the PINMUX register controlling this pin/ball */
-    uint32_t mask;            /* Bit mask for the function select field */
-    uint32_t sel_gpio;        /* Encoded value (already shifted/masked) that selects GPIO function */
-} tms320c6452_pinmux_entry_t;
+    uintptr_t syscfg_base; /* SYSCFG/DEV base; required for PINMUX access */
+} tms320c6452_gpio_pinmux_ctx_t;
 
-/* Apply a table of pinmux entries to select GPIO function. Deterministic RMW per entry. */
-void tms320c6452_pinmux_apply(const tms320c6452_pinmux_entry_t *table, uint32_t count);
+/* API declarations (single feature: Pin multiplexing control) */
+int tms320c6452_gpio_pin_multiplexing_control_init(tms320c6452_gpio_pinmux_ctx_t* ctx, uintptr_t syscfg_base);
+int tms320c6452_gpio_pin_multiplexing_control_unlock(const tms320c6452_gpio_pinmux_ctx_t* ctx);
+int tms320c6452_gpio_pin_multiplexing_control_lock(const tms320c6452_gpio_pinmux_ctx_t* ctx);
+int tms320c6452_gpio_pin_multiplexing_control_set(const tms320c6452_gpio_pinmux_ctx_t* ctx, uint32_t pin_index, uint32_t function_sel);
+int tms320c6452_gpio_pin_multiplexing_control_get(const tms320c6452_gpio_pinmux_ctx_t* ctx, uint32_t pin_index, uint32_t* out_function_sel);
 
-/* Verify that all entries in the table are currently configured for GPIO. */
-bool tms320c6452_pinmux_verify(const tms320c6452_pinmux_entry_t *table, uint32_t count);
-
-/* Write a single entry (helper) */
-static inline void tms320c6452_pinmux_write_one(const tms320c6452_pinmux_entry_t *e)
-{
-    uint32_t v = *e->reg;
-    v &= ~e->mask;
-    v |= (e->sel_gpio & e->mask);
-    *e->reg = v;
+#ifdef __cplusplus
 }
-
-/* Read/verify a single entry (helper) */
-static inline bool tms320c6452_pinmux_is_gpio(const tms320c6452_pinmux_entry_t *e)
-{
-    uint32_t v = *e->reg;
-    return ( (v & e->mask) == (e->sel_gpio & e->mask) );
-}
+#endif
 
 #endif /* TMS320C6452_GPIO_PIN_MULTIPLEXING_CONTROL_H */
