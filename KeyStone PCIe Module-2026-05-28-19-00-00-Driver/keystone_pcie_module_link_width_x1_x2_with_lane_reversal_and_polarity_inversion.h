@@ -1,0 +1,5 @@
+#ifndef KEYSTONE_PCIE_MODULE_LINK_WIDTH_X1_X2_WITH_LANE_REVERSAL_AND_POLARITY_INVERSION_H
+#define KEYSTONE_PCIE_MODULE_LINK_WIDTH_X1_X2_WITH_LANE_REVERSAL_AND_POLARITY_INVERSION_H
+#include "core_keystone_pcie_module.h"
+int kpm_link_width_init(const pcie_core_ops_t* ops);
+#endif

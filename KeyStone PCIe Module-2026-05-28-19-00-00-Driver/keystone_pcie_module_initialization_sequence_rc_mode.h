@@ -1,0 +1,5 @@
+#ifndef KEYSTONE_PCIE_MODULE_INITIALIZATION_SEQUENCE_RC_MODE_H
+#define KEYSTONE_PCIE_MODULE_INITIALIZATION_SEQUENCE_RC_MODE_H
+#include "core_keystone_pcie_module.h"
+int kpm_rc_init_sequence(const pcie_core_ops_t* ops);
+#endif
