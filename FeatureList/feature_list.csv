@@ -4,21 +4,21 @@ Link width x1 or x2,Performance,Single physical link operates as x1 or x2 lanes;
 Dual-mode Root Complex and Endpoint,Interfaces,Controller boots or switches between RC and EP modes; software override supported,PCIESSMODE; DEVSTAT.PCIESSMODE,NO
 Local configuration space access,Configuration,Type 0 in EP mode and Type 1 in RC mode; 32-bit accesses only,Local Config Space; CAP_PTR,NO
 Outbound config TLP access,Configuration,RC can access remote Type0 or Type1 config space through programmed setup,CFG_SETUP; DEV_STAT_CTRL,NO
-Application MMR access via BAR0,Configuration,Application registers visible through BAR0 in EP and RC; top window also via config space,BAR0; Application Registers,NO
+Application MMR access via BAR0,Configuration,Application registers visible through BAR0 in EP and RC; top window also via config space,BAR0; Application Registers,YES
 Outbound address translation windows,Configuration,Programmable outbound regions with selectable window size and per-region offset,OB_SIZE; OB_OFFSET_INDEXn; OB_OFFSETn_HI,NO
 Inbound address translation regions,Configuration,Four inbound regions with BAR match and offset to internal address,IB_BARn; IB_STARTn_LO/HI; IB_OFFSETn,NO
 RC I/O window access,Interfaces,Dedicated 4 KB internal I/O space translated to remote I/O in RC mode only,IOBASE; RC Mode,NO
 MSI generation and reception,Interrupts,Supports up to 32 MSI vectors with enable mask per group and status reporting,MSI*_IRQ_ENABLE_SET/CLR; MSI*_IRQ_STATUS,NO
 Legacy INTx support,Interrupts,Legacy interrupt reception in RC and generation in EP; EOI handshake required,INTx; IRQ_EOI,NO
 IRQ end-of-interrupt protocol,Interrupts,Write EOI with event number to signal completion to interrupt controller,IRQ_EOI,NO
-Advanced Error Reporting,Error handling,Implements AER uncorrectable and correctable error logs with masks and severity,PCIE_UNCERR; PCIE_CERR; HDR_LOG0..3,NO
+Advanced Error Reporting,Error handling,Implements AER uncorrectable and correctable error logs with masks and severity,PCIE_UNCERR; PCIE_CERR; HDR_LOG0..3,YES
 ECRC generation and checking,Error handling,End-to-end CRC support for TLPs to improve integrity,ECRC; DEV_CAP2,NO
 Link training state control,Debug,Software enables or disables link training and monitors LTSSM state,CMD_STATUS.LTSSM_EN; DEBUG0.LTSSM_STATE,NO
 ASPM L0s and L1 support,Power,Active state power management for L0s and L1 link states,LINK_STAT_CTRL; LINK_CAP,NO
 Device power states D0/D1/D2/D3hot,Power,Implements PCIe PM capability with PME signaling and control,PMCAP; PM_CTL_STAT,NO
 PM messages TurnOff and PME,Power,RC can transmit PM_TURNOFF; EP can transmit PME via command bits,PMCMD; PMRST_IRQ_STATUS,NO
 No L2 link state,Power,Module does not support L2 state; L2 entry is disabled or not functional,PMCFG.ENTR_L23; Spec Note,NO
-SerDes PLL configuration,Performance,Reference clock drives SerDes PLL with programmable multiplier and lock status,PCIE_SERDES_CFGPLL; PCIE_SERDES_STS,NO
+SerDes PLL configuration,Performance,Reference clock drives SerDes PLL with programmable multiplier and lock status,PCIE_SERDES_CFGPLL; PCIE_SERDES_STS,YES
 PHY loopback support,Debug,Loopback available in RC mode for test and validation,PCS/SERDES controls,NO
 Polarity inversion on receive,Interfaces,Automatic polarity inversion handling on RX lanes,PHY; Port Logic,NO
 Automatic lane reversal,Interfaces,Hardware supports automatic lane reversal to ease routing,PHY; Port Logic,NO
@@ -30,13 +30,13 @@ Payload size limits,Performance,Max outbound payload 128 B and inbound payload 2
 Activity monitoring,Debug,Indicates presence of transactions in inbound or outbound paths for diagnostics,ACT_STATUS.IB_NOT_EMPTY; ACT_STATUS.OB_NOT_EMPTY,NO
 Downstream hot reset generation,Error handling,Software can initiate a downstream hot reset and manage warm reset flushing,RSTCMD.INIT_RST; RSTCMD.FLUSH_N,NO
 Bus enumeration in RC,Interfaces,Enumerates downstream devices and configures BARs after link up,RC Mode; Type1 Registers,NO
-BAR sizing and masks,Configuration,BAR and MASK registers define aperture sizes for application mapping,BARn; MASKn,NO
+BAR sizing and masks,Configuration,BAR and MASK registers define aperture sizes for application mapping,BARn; MASKn,YES
 Root port specific capabilities,Interfaces,Root control; status and slot capability registers are present in RC mode only,ROOT_CTRL_CAP; ROOT_STATUS; SLOT_CAP,NO
 Single virtual channel and traffic class,Performance,Only one VC and one TC are supported simplifying QoS behavior,VC/TC Limits; Spec Note,NO
 DMA via VBUSM master and slave,Performance,128-bit master and slave interfaces support high bandwidth memory moves,VBUSM Master; VBUSM Slave,NO
 Non-burst incremental accesses only,Configuration,All config and I/O accesses must be single 32-bit and non-cacheable,Access Rules; Spec Note,NO
 No inbound I/O transactions,Interfaces,Inbound I/O space access is not supported in RC or EP mode,IO Access Limits,NO
-LTSSM debug visibility,Debug,LTSSM state encoding exposed in debug registers to verify link state,DEBUG0; DEBUG1,NO
+LTSSM debug visibility,Debug,LTSSM state encoding exposed in debug registers to verify link state,DEBUG0; DEBUG1,YES
 Priority and privilege tagging,Security,Master privilege ID and priority levels can be set for initiator traffic,PRIORITY.MST_PRIV; MST_PRIVID; MST_PRIORITY,NO
 Message transmit and receive,Interfaces,PCIe message TLPs are supported for system events and notifications,Message TLP Support,NO
 Credit management automatic,Performance,Automatic credit handling in the transaction layer for flow control,Credit Management,NO
