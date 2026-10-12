@@ -1,0 +1,48 @@
+name: Generate TestPlan Excel
+
+on:
+  push:
+    branches:
+      - testplan/mipi-csi2-excel-generation
+    paths:
+      - 'testplan_generator/**'
+  workflow_dispatch:
+
+jobs:
+  generate-excel:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: testplan/mipi-csi2-excel-generation
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install openpyxl
+
+      - name: Generate Excel workbook
+        env:
+          OUTPUT_DIR: docs
+        run: python testplan_generator/generate_excel.py
+
+      - name: Commit and push Excel file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/*.xlsx
+          git commit -m "Added generated TestPlan Excel" || echo "No changes to commit"
+          git push
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: testplan-excel
+          path: docs/*.xlsx
+          retention-days: 30
