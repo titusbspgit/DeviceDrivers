@@ -1,0 +1,46 @@
+name: Generate DWC_ether_qos TestPlan Excel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'testplan_generator/DWC_ether_qos/**'
+  workflow_dispatch:
+
+jobs:
+  generate-excel:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install openpyxl
+
+      - name: Generate Excel workbook
+        env:
+          OUTPUT_DIR: testplan_generator/DWC_ether_qos
+        run: python testplan_generator/DWC_ether_qos/generate_testplan_excel.py
+
+      - name: Commit and push Excel file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add testplan_generator/DWC_ether_qos/*.xlsx
+          git commit -m "Generated TestPlan Excel Workbook" || echo "No changes to commit"
+          git push
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dwc-ether-qos-testplan
+          path: testplan_generator/DWC_ether_qos/*.xlsx
+          retention-days: 90
